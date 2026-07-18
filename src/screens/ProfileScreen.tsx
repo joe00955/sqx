@@ -1,9 +1,10 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { currentUser, courts } from '../data/mockData';
 import { skillLabelFor } from '../logic/skill';
 import { slotKey } from '../logic/slotKey';
-import { colors } from '../theme';
+import { colors, radius, spacing } from '../theme';
 
 interface Props {
   skillLevel: number;
@@ -12,8 +13,12 @@ interface Props {
   onToggleSlot: (key: string) => void;
 }
 
+const MIN_SKILL = 1;
+const MAX_SKILL = 5;
+
 export default function ProfileScreen({ skillLevel, onSkillChange, activeSlots, onToggleSlot }: Props) {
   const homeCourt = courts.find((c) => c.id === currentUser.homeCourtId);
+  const skillFraction = (skillLevel - MIN_SKILL) / (MAX_SKILL - MIN_SKILL);
 
   return (
     <View style={styles.container}>
@@ -26,7 +31,10 @@ export default function ProfileScreen({ skillLevel, onSkillChange, activeSlots, 
           </View>
           <View>
             <Text style={styles.name}>{currentUser.name}</Text>
-            <Text style={styles.muted}>{homeCourt?.name}</Text>
+            <View style={styles.homeCourtRow}>
+              <Ionicons name="pin-outline" size={13} color={colors.textMuted} />
+              <Text style={styles.muted}>{homeCourt?.name}</Text>
+            </View>
           </View>
         </View>
         <Text style={styles.bio}>{currentUser.bio}</Text>
@@ -36,21 +44,28 @@ export default function ProfileScreen({ skillLevel, onSkillChange, activeSlots, 
         <Text style={styles.sectionTitle}>Skill level</Text>
         <View style={styles.stepperRow}>
           <Pressable
-            style={styles.stepperButton}
-            onPress={() => onSkillChange(Math.max(1, Math.round((skillLevel - 0.5) * 10) / 10))}
+            hitSlop={8}
+            onPress={() => onSkillChange(Math.max(MIN_SKILL, Math.round((skillLevel - 0.5) * 10) / 10))}
           >
-            <Text style={styles.stepperButtonText}>–</Text>
+            <Ionicons name="remove-circle-outline" size={34} color={colors.accent} />
           </Pressable>
           <View style={styles.stepperValue}>
             <Text style={styles.stepperValueText}>{skillLevel.toFixed(1)}</Text>
             <Text style={styles.muted}>{skillLabelFor(skillLevel)}</Text>
           </View>
           <Pressable
-            style={styles.stepperButton}
-            onPress={() => onSkillChange(Math.min(5, Math.round((skillLevel + 0.5) * 10) / 10))}
+            hitSlop={8}
+            onPress={() => onSkillChange(Math.min(MAX_SKILL, Math.round((skillLevel + 0.5) * 10) / 10))}
           >
-            <Text style={styles.stepperButtonText}>+</Text>
+            <Ionicons name="add-circle-outline" size={34} color={colors.accent} />
           </Pressable>
+        </View>
+        <View style={styles.skillTrack}>
+          <View style={[styles.skillFill, { width: `${skillFraction * 100}%` }]} />
+        </View>
+        <View style={styles.skillEndsRow}>
+          <Text style={styles.skillEndLabel}>Beginner</Text>
+          <Text style={styles.skillEndLabel}>Pro</Text>
         </View>
       </View>
 
@@ -67,6 +82,12 @@ export default function ProfileScreen({ skillLevel, onSkillChange, activeSlots, 
                 style={[styles.slotChip, active ? styles.slotChipActive : styles.slotChipInactive]}
                 onPress={() => onToggleSlot(key)}
               >
+                <Ionicons
+                  name={active ? 'checkmark-circle' : 'close-circle-outline'}
+                  size={14}
+                  color={active ? colors.accent : colors.textFaint}
+                  style={styles.slotChipIcon}
+                />
                 <Text style={[styles.slotChipText, !active && styles.slotChipTextInactive]}>
                   {slot.day} {slot.start}-{slot.end}
                 </Text>
@@ -82,85 +103,79 @@ export default function ProfileScreen({ skillLevel, onSkillChange, activeSlots, 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 12,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
   },
   title: {
     color: colors.text,
-    fontSize: 24,
-    fontWeight: '700',
-    marginBottom: 14,
+    fontSize: 22,
+    fontWeight: '800',
+    marginBottom: spacing.md,
   },
   card: {
     backgroundColor: colors.surface,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 14,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.md + 2,
     borderWidth: 1,
     borderColor: colors.border,
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: spacing.md,
   },
   avatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
     backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 14,
+    marginRight: spacing.md + 2,
   },
   avatarText: {
-    color: colors.accentDark,
-    fontWeight: '700',
-    fontSize: 17,
+    color: colors.accentText,
+    fontWeight: '800',
+    fontSize: 18,
   },
   name: {
     color: colors.text,
     fontSize: 18,
     fontWeight: '700',
   },
+  homeCourtRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 3,
+  },
   muted: {
     color: colors.textMuted,
     fontSize: 13,
-    marginTop: 2,
   },
   mutedSmall: {
     color: colors.textMuted,
     fontSize: 12,
-    marginBottom: 10,
+    marginBottom: spacing.md,
   },
   bio: {
     color: colors.text,
     fontSize: 13,
+    lineHeight: 18,
   },
   sectionTitle: {
     color: colors.text,
     fontSize: 15,
     fontWeight: '700',
-    marginBottom: 10,
+    marginBottom: spacing.md,
   },
   stepperRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 20,
-  },
-  stepperButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.surfaceAlt,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepperButtonText: {
-    color: colors.accent,
-    fontSize: 20,
-    fontWeight: '700',
+    gap: 24,
+    marginBottom: spacing.md,
   },
   stepperValue: {
     alignItems: 'center',
@@ -168,8 +183,30 @@ const styles = StyleSheet.create({
   },
   stepperValueText: {
     color: colors.text,
-    fontSize: 22,
-    fontWeight: '700',
+    fontSize: 24,
+    fontWeight: '800',
+  },
+  skillTrack: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.surfaceAlt,
+    overflow: 'hidden',
+  },
+  skillFill: {
+    height: '100%',
+    borderRadius: 3,
+    backgroundColor: colors.accent,
+  },
+  skillEndsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 6,
+  },
+  skillEndLabel: {
+    color: colors.textFaint,
+    fontSize: 11,
+    fontWeight: '600',
+    textTransform: 'uppercase',
   },
   slotWrap: {
     flexDirection: 'row',
@@ -177,9 +214,11 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   slotChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 10,
+    borderRadius: radius.pill,
     borderWidth: 1,
   },
   slotChipActive: {
@@ -190,13 +229,16 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     borderColor: colors.border,
   },
+  slotChipIcon: {
+    marginRight: 5,
+  },
   slotChipText: {
     color: colors.text,
     fontSize: 12,
     fontWeight: '600',
   },
   slotChipTextInactive: {
-    color: colors.textMuted,
+    color: colors.textFaint,
     textDecorationLine: 'line-through',
   },
 });

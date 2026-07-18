@@ -1,18 +1,19 @@
 import React, { useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { players, courts } from '../data/mockData';
 import { Player } from '../data/types';
 import { findMatches, MatchResult } from '../logic/matching';
 import MatchCard from '../components/MatchCard';
-import { colors } from '../theme';
+import { colors, radius, spacing } from '../theme';
 
 type SortMode = 'best' | 'closest' | 'skill' | 'availability';
 
-const sortModes: { key: SortMode; label: string }[] = [
-  { key: 'best', label: 'Best match' },
-  { key: 'closest', label: 'Closest' },
-  { key: 'skill', label: 'Similar skill' },
-  { key: 'availability', label: 'Has a slot' },
+const sortModes: { key: SortMode; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { key: 'best', label: 'Best match', icon: 'sparkles-outline' },
+  { key: 'closest', label: 'Closest', icon: 'location-outline' },
+  { key: 'skill', label: 'Similar skill', icon: 'trophy-outline' },
+  { key: 'availability', label: 'Has a slot', icon: 'time-outline' },
 ];
 
 function sortMatches(matches: MatchResult[], mode: SortMode): MatchResult[] {
@@ -41,10 +42,10 @@ export default function BrowseScreen({ me }: Props) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Find a game</Text>
-      <Text style={styles.subtitle}>
-        Matched on skill, distance & free time · {me.availability.length} slot(s) active
-      </Text>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.title}>Find a game</Text>
+        <Text style={styles.subtitle}>{me.availability.length} slot(s) active this week</Text>
+      </View>
 
       <View style={styles.filterRow}>
         {sortModes.map((mode) => {
@@ -55,6 +56,12 @@ export default function BrowseScreen({ me }: Props) {
               style={[styles.filterChip, active && styles.filterChipActive]}
               onPress={() => setSortMode(mode.key)}
             >
+              <Ionicons
+                name={mode.icon}
+                size={13}
+                color={active ? colors.accentText : colors.textMuted}
+                style={styles.filterIcon}
+              />
               <Text style={[styles.filterText, active && styles.filterTextActive]}>{mode.label}</Text>
             </Pressable>
           );
@@ -75,30 +82,34 @@ export default function BrowseScreen({ me }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 12,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+  },
+  sectionHeader: {
+    marginBottom: spacing.md,
   },
   title: {
     color: colors.text,
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 22,
+    fontWeight: '800',
   },
   subtitle: {
     color: colors.textMuted,
     fontSize: 13,
-    marginTop: 4,
-    marginBottom: 14,
+    marginTop: 3,
   },
   filterRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    marginBottom: 14,
+    marginBottom: spacing.md + 2,
   },
   filterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 20,
+    paddingVertical: 8,
+    borderRadius: radius.pill,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
@@ -107,13 +118,16 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accent,
     borderColor: colors.accent,
   },
+  filterIcon: {
+    marginRight: 5,
+  },
   filterText: {
     color: colors.textMuted,
     fontSize: 12,
     fontWeight: '600',
   },
   filterTextActive: {
-    color: colors.accentDark,
+    color: colors.accentText,
   },
   list: {
     paddingBottom: 24,
