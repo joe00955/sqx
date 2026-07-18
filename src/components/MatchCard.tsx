@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { MatchResult } from '../logic/matching';
-import { colors, radius, shadow, spacing } from '../theme';
+import { colors, fonts, radius, shadow, spacing } from '../theme';
 
 interface Props {
   match: MatchResult;
@@ -143,24 +143,26 @@ const styles = StyleSheet.create({
   avatar: {
     width: 46,
     height: 46,
-    borderRadius: 23,
+    borderRadius: 14,
     backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.md,
+    transform: [{ rotate: '-4deg' }],
   },
   avatarText: {
     color: colors.accentText,
-    fontWeight: '800',
+    fontFamily: fonts.extrabold,
     fontSize: 15,
+    transform: [{ rotate: '4deg' }],
   },
   headerText: {
     flex: 1,
   },
   name: {
     color: colors.text,
+    fontFamily: fonts.bold,
     fontSize: 16,
-    fontWeight: '700',
   },
   subtitleRow: {
     flexDirection: 'row',
@@ -170,6 +172,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     color: colors.textMuted,
+    fontFamily: fonts.medium,
     fontSize: 12.5,
   },
   scoreWrap: {
@@ -177,14 +180,14 @@ const styles = StyleSheet.create({
   },
   scoreValue: {
     color: colors.accent,
-    fontWeight: '800',
-    fontSize: 20,
-    lineHeight: 22,
+    fontFamily: fonts.display,
+    fontSize: 26,
+    lineHeight: 26,
   },
   scoreUnit: {
     color: colors.textFaint,
+    fontFamily: fonts.bold,
     fontSize: 10,
-    fontWeight: '600',
     textTransform: 'uppercase',
   },
   scoreTrack: {
@@ -201,6 +204,7 @@ const styles = StyleSheet.create({
   },
   bio: {
     color: colors.textMuted,
+    fontFamily: fonts.regular,
     fontSize: 13,
     marginBottom: spacing.sm,
     lineHeight: 18,
@@ -218,6 +222,7 @@ const styles = StyleSheet.create({
   },
   skillNote: {
     color: colors.text,
+    fontFamily: fonts.medium,
     fontSize: 12,
   },
   bookingBox: {
@@ -246,18 +251,20 @@ const styles = StyleSheet.create({
   },
   bookingLabel: {
     color: colors.accent,
+    fontFamily: fonts.bold,
     fontSize: 11,
-    fontWeight: '700',
     textTransform: 'uppercase',
     marginBottom: 3,
     letterSpacing: 0.3,
   },
   bookingDetail: {
     color: colors.text,
+    fontFamily: fonts.medium,
     fontSize: 13,
   },
   bookingMore: {
     color: colors.textMuted,
+    fontFamily: fonts.regular,
     fontSize: 11,
     marginTop: 2,
   },
@@ -269,6 +276,7 @@ const styles = StyleSheet.create({
   },
   noOverlap: {
     color: colors.textMuted,
+    fontFamily: fonts.regular,
     fontSize: 12,
     flex: 1,
   },
@@ -294,8 +302,8 @@ const styles = StyleSheet.create({
   },
   modeText: {
     color: colors.textMuted,
+    fontFamily: fonts.semibold,
     fontSize: 11.5,
-    fontWeight: '600',
   },
   modeTextActive: {
     color: colors.accentText,
@@ -321,7 +329,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: colors.accentText,
-    fontWeight: '700',
+    fontFamily: fonts.bold,
     fontSize: 14,
   },
   buttonTextRequested: {

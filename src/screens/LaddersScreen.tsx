@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { players } from '../data/mockData';
 import { Player } from '../data/types';
 import { casualLadder, competitiveLadder, LadderRow } from '../logic/ladder';
-import { colors, radius, spacing } from '../theme';
+import { colors, fonts, radius, spacing } from '../theme';
 
 type LadderMode = 'competitive' | 'casual';
 
@@ -67,7 +67,7 @@ export default function LaddersScreen({ me }: Props) {
   return (
     <View style={styles.container}>
       <View style={styles.sectionHeader}>
-        <Text style={styles.title}>Ladders</Text>
+        <Text style={styles.title}>LADDERS</Text>
         <Text style={styles.subtitleHeader}>
           {mode === 'competitive'
             ? 'Ranked by ELO — opt in per match to climb'
@@ -122,11 +122,13 @@ const styles = StyleSheet.create({
   },
   title: {
     color: colors.text,
-    fontSize: 22,
-    fontWeight: '800',
+    fontFamily: fonts.display,
+    fontSize: 26,
+    letterSpacing: 0.4,
   },
   subtitleHeader: {
     color: colors.textMuted,
+    fontFamily: fonts.medium,
     fontSize: 13,
     marginTop: 3,
   },
@@ -153,8 +155,8 @@ const styles = StyleSheet.create({
   },
   segmentText: {
     color: colors.textMuted,
+    fontFamily: fonts.bold,
     fontSize: 13,
-    fontWeight: '700',
   },
   segmentTextActive: {
     color: colors.accentText,
@@ -183,38 +185,41 @@ const styles = StyleSheet.create({
   },
   rankText: {
     color: colors.textMuted,
-    fontWeight: '700',
+    fontFamily: fonts.bold,
     fontSize: 14,
   },
   avatar: {
     width: 38,
     height: 38,
-    borderRadius: 19,
+    borderRadius: 12,
     backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.md,
+    transform: [{ rotate: '-4deg' }],
   },
   avatarText: {
     color: colors.accentText,
-    fontWeight: '800',
+    fontFamily: fonts.extrabold,
     fontSize: 13,
+    transform: [{ rotate: '4deg' }],
   },
   nameWrap: {
     flex: 1,
   },
   name: {
     color: colors.text,
+    fontFamily: fonts.bold,
     fontSize: 14,
-    fontWeight: '700',
   },
   youTag: {
     color: colors.accent,
+    fontFamily: fonts.bold,
     fontSize: 12,
-    fontWeight: '700',
   },
   subtitle: {
     color: colors.textMuted,
+    fontFamily: fonts.medium,
     fontSize: 12,
     marginTop: 2,
   },
@@ -223,13 +228,13 @@ const styles = StyleSheet.create({
   },
   statValue: {
     color: colors.accent,
-    fontSize: 16,
-    fontWeight: '800',
+    fontFamily: fonts.display,
+    fontSize: 18,
   },
   statUnit: {
     color: colors.textFaint,
+    fontFamily: fonts.bold,
     fontSize: 10,
-    fontWeight: '600',
     textTransform: 'uppercase',
   },
 });

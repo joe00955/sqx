@@ -1,14 +1,26 @@
 import React, { useMemo, useState } from 'react';
-import { Pressable, SafeAreaView, StatusBar, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, Pressable, SafeAreaView, StatusBar, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useFonts as useAnton, Anton_400Regular } from '@expo-google-fonts/anton';
+import {
+  useFonts as useManrope,
+  Manrope_400Regular,
+  Manrope_500Medium,
+  Manrope_600SemiBold,
+  Manrope_700Bold,
+  Manrope_800ExtraBold,
+} from '@expo-google-fonts/manrope';
 import BrowseScreen from './src/screens/BrowseScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import CommunitiesScreen from './src/screens/CommunitiesScreen';
 import LaddersScreen from './src/screens/LaddersScreen';
+import Logo from './src/components/Logo';
+import AccentMotif from './src/components/AccentMotif';
 import { currentUser } from './src/data/mockData';
 import { skillLabelFor } from './src/logic/skill';
 import { slotKey } from './src/logic/slotKey';
-import { colors, radius, spacing } from './src/theme';
+import { colors, fonts, gradients, radius, spacing } from './src/theme';
 
 type Tab = 'browse' | 'communities' | 'ladders' | 'profile';
 
@@ -23,6 +35,16 @@ const WIDE_BREAKPOINT = 820;
 const MAX_CONTENT_WIDTH = 720;
 
 export default function App() {
+  const [antonLoaded] = useAnton({ Anton_400Regular });
+  const [manropeLoaded] = useManrope({
+    Manrope_400Regular,
+    Manrope_500Medium,
+    Manrope_600SemiBold,
+    Manrope_700Bold,
+    Manrope_800ExtraBold,
+  });
+  const fontsReady = antonLoaded && manropeLoaded;
+
   const { width } = useWindowDimensions();
   const isWide = width >= WIDE_BREAKPOINT;
 
@@ -46,6 +68,14 @@ export default function App() {
     [skillLevel, activeSlots]
   );
 
+  if (!fontsReady) {
+    return (
+      <View style={styles.loadingScreen}>
+        <ActivityIndicator color={colors.accent} />
+      </View>
+    );
+  }
+
   const activeScreen =
     tab === 'browse' ? (
       <BrowseScreen me={me} />
@@ -62,24 +92,16 @@ export default function App() {
       />
     );
 
-  const logo = (
-    <View style={styles.logoRow}>
-      <View style={styles.logoMark}>
-        <Text style={styles.logoMarkText}>X</Text>
-      </View>
-      <Text style={styles.wordmark}>
-        Squash<Text style={styles.wordmarkAccent}>X</Text> Rally
-      </Text>
-    </View>
-  );
-
   if (isWide) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <StatusBar barStyle="light-content" backgroundColor={colors.background} />
         <View style={styles.wideRoot}>
-          <View style={styles.sidebar}>
-            <View style={styles.sidebarLogoWrap}>{logo}</View>
+          <LinearGradient colors={gradients.glow} style={styles.sidebar}>
+            <AccentMotif style={styles.sidebarMotif} />
+            <View style={styles.sidebarLogoWrap}>
+              <Logo />
+            </View>
             {tabs.map((t) => {
               const active = t.key === tab;
               return (
@@ -93,7 +115,7 @@ export default function App() {
                 </Pressable>
               );
             })}
-          </View>
+          </LinearGradient>
           <View style={styles.wideContentOuter}>
             <View style={styles.wideContentInner}>{activeScreen}</View>
           </View>
@@ -106,7 +128,10 @@ export default function App() {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="light-content" backgroundColor={colors.background} />
 
-      <View style={styles.header}>{logo}</View>
+      <LinearGradient colors={gradients.glow} style={styles.header}>
+        <AccentMotif style={styles.headerMotif} />
+        <Logo />
+      </LinearGradient>
 
       <View style={styles.content}>{activeScreen}</View>
 
@@ -131,42 +156,23 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  logoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  logoMark: {
-    width: 30,
-    height: 30,
-    borderRadius: radius.sm - 2,
-    backgroundColor: colors.accent,
+  loadingScreen: {
+    flex: 1,
+    backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: spacing.sm + 2,
-  },
-  logoMarkText: {
-    color: colors.accentText,
-    fontWeight: '900',
-    fontSize: 16,
-  },
-  wordmark: {
-    color: colors.text,
-    fontSize: 17,
-    fontWeight: '700',
-    letterSpacing: 0.2,
-  },
-  wordmarkAccent: {
-    color: colors.accent,
   },
 
   // Narrow (mobile) layout
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+    overflow: 'hidden',
+  },
+  headerMotif: {
+    width: 200,
   },
   content: {
     flex: 1,
@@ -185,8 +191,8 @@ const styles = StyleSheet.create({
   },
   tabLabel: {
     color: colors.textMuted,
+    fontFamily: fonts.semibold,
     fontSize: 11.5,
-    fontWeight: '600',
   },
   tabLabelActive: {
     color: colors.accent,
@@ -211,6 +217,10 @@ const styles = StyleSheet.create({
     borderRightColor: colors.border,
     paddingTop: spacing.lg,
     paddingHorizontal: spacing.md,
+    overflow: 'hidden',
+  },
+  sidebarMotif: {
+    width: 220,
   },
   sidebarLogoWrap: {
     marginBottom: spacing.xl,
@@ -230,8 +240,8 @@ const styles = StyleSheet.create({
   },
   sidebarLabel: {
     color: colors.textMuted,
+    fontFamily: fonts.semibold,
     fontSize: 14,
-    fontWeight: '600',
   },
   sidebarLabelActive: {
     color: colors.text,

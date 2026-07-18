@@ -3,7 +3,7 @@ import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { communities } from '../data/mockData';
 import { Community } from '../data/types';
-import { colors, radius, shadow, spacing } from '../theme';
+import { colors, fonts, radius, shadow, spacing } from '../theme';
 
 interface Props {
   joined: Record<string, boolean>;
@@ -64,7 +64,7 @@ export default function CommunitiesScreen({ joined, onToggleJoin }: Props) {
   return (
     <View style={styles.container}>
       <View style={styles.sectionHeader}>
-        <Text style={styles.title}>Communities</Text>
+        <Text style={styles.title}>COMMUNITIES</Text>
         <Text style={styles.subtitle}>Regular groups and clubs around Duisburg — join instead of finding a partner from scratch every time</Text>
       </View>
 
@@ -92,11 +92,13 @@ const styles = StyleSheet.create({
   },
   title: {
     color: colors.text,
-    fontSize: 22,
-    fontWeight: '800',
+    fontFamily: fonts.display,
+    fontSize: 26,
+    letterSpacing: 0.4,
   },
   subtitle: {
     color: colors.textMuted,
+    fontFamily: fonts.medium,
     fontSize: 13,
     marginTop: 3,
     lineHeight: 18,
@@ -121,8 +123,8 @@ const styles = StyleSheet.create({
   },
   name: {
     color: colors.text,
+    fontFamily: fonts.bold,
     fontSize: 16,
-    fontWeight: '700',
     flex: 1,
     marginRight: spacing.sm,
   },
@@ -133,11 +135,12 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   vibeText: {
+    fontFamily: fonts.bold,
     fontSize: 11,
-    fontWeight: '700',
   },
   description: {
     color: colors.textMuted,
+    fontFamily: fonts.regular,
     fontSize: 13,
     lineHeight: 18,
     marginBottom: spacing.sm,
@@ -150,6 +153,7 @@ const styles = StyleSheet.create({
   },
   metaText: {
     color: colors.textMuted,
+    fontFamily: fonts.medium,
     fontSize: 12.5,
   },
   button: {
@@ -174,7 +178,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: colors.accentText,
-    fontWeight: '700',
+    fontFamily: fonts.bold,
     fontSize: 14,
   },
   buttonTextJoined: {

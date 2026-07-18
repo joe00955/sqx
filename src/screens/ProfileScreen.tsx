@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { currentUser, courts } from '../data/mockData';
 import { skillLabelFor } from '../logic/skill';
 import { slotKey } from '../logic/slotKey';
-import { colors, radius, spacing } from '../theme';
+import { colors, fonts, radius, spacing } from '../theme';
 
 interface Props {
   skillLevel: number;
@@ -22,7 +22,7 @@ export default function ProfileScreen({ skillLevel, onSkillChange, activeSlots, 
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Your profile</Text>
+      <Text style={styles.title}>YOUR PROFILE</Text>
 
       <View style={styles.card}>
         <View style={styles.headerRow}>
@@ -108,8 +108,9 @@ const styles = StyleSheet.create({
   },
   title: {
     color: colors.text,
-    fontSize: 22,
-    fontWeight: '800',
+    fontFamily: fonts.display,
+    fontSize: 26,
+    letterSpacing: 0.4,
     marginBottom: spacing.md,
   },
   card: {
@@ -128,21 +129,23 @@ const styles = StyleSheet.create({
   avatar: {
     width: 54,
     height: 54,
-    borderRadius: 27,
+    borderRadius: 16,
     backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.md + 2,
+    transform: [{ rotate: '-4deg' }],
   },
   avatarText: {
     color: colors.accentText,
-    fontWeight: '800',
+    fontFamily: fonts.extrabold,
     fontSize: 18,
+    transform: [{ rotate: '4deg' }],
   },
   name: {
     color: colors.text,
+    fontFamily: fonts.bold,
     fontSize: 18,
-    fontWeight: '700',
   },
   homeCourtRow: {
     flexDirection: 'row',
@@ -152,22 +155,25 @@ const styles = StyleSheet.create({
   },
   muted: {
     color: colors.textMuted,
+    fontFamily: fonts.medium,
     fontSize: 13,
   },
   mutedSmall: {
     color: colors.textMuted,
+    fontFamily: fonts.medium,
     fontSize: 12,
     marginBottom: spacing.md,
   },
   bio: {
     color: colors.text,
+    fontFamily: fonts.regular,
     fontSize: 13,
     lineHeight: 18,
   },
   sectionTitle: {
     color: colors.text,
+    fontFamily: fonts.bold,
     fontSize: 15,
-    fontWeight: '700',
     marginBottom: spacing.md,
   },
   stepperRow: {
@@ -183,8 +189,8 @@ const styles = StyleSheet.create({
   },
   stepperValueText: {
     color: colors.text,
-    fontSize: 24,
-    fontWeight: '800',
+    fontFamily: fonts.display,
+    fontSize: 28,
   },
   skillTrack: {
     height: 6,
@@ -204,8 +210,8 @@ const styles = StyleSheet.create({
   },
   skillEndLabel: {
     color: colors.textFaint,
+    fontFamily: fonts.bold,
     fontSize: 11,
-    fontWeight: '600',
     textTransform: 'uppercase',
   },
   slotWrap: {
@@ -218,7 +224,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: radius.pill,
+    borderRadius: radius.sm,
     borderWidth: 1,
   },
   slotChipActive: {
@@ -234,8 +240,8 @@ const styles = StyleSheet.create({
   },
   slotChipText: {
     color: colors.text,
+    fontFamily: fonts.semibold,
     fontSize: 12,
-    fontWeight: '600',
   },
   slotChipTextInactive: {
     color: colors.textFaint,

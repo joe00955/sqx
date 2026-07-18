@@ -1,17 +1,33 @@
 export const colors = {
-  background: '#0A0A0B',
-  surface: '#1A1A1C',
-  surfaceAlt: '#232326',
-  surfaceRaised: '#2A2A2E',
-  border: '#2E2E32',
-  accent: '#FF6B1A',
+  background: '#14100D',
+  backgroundGlow: '#241708',
+  surface: '#1F1815',
+  surfaceAlt: '#2A211C',
+  surfaceRaised: '#342821',
+  border: '#3A2C24',
+  accent: '#FF5A1F',
+  accentLight: '#FFA65C',
   accentMuted: '#3A2414',
-  accentText: '#0A0A0B',
-  text: '#F5F5F7',
-  textMuted: '#9B9BA3',
-  textFaint: '#6B6B72',
+  accentText: '#150C06',
+  text: '#F8F3EE',
+  textMuted: '#B7A89C',
+  textFaint: '#8A7A6D',
   danger: '#FF5C4D',
-  success: '#4CD97B',
+  success: '#8BCB5C',
+};
+
+export const gradients = {
+  accent: [colors.accentLight, colors.accent] as const,
+  glow: [colors.backgroundGlow, colors.background] as const,
+};
+
+export const fonts = {
+  display: 'Anton_400Regular',
+  regular: 'Manrope_400Regular',
+  medium: 'Manrope_500Medium',
+  semibold: 'Manrope_600SemiBold',
+  bold: 'Manrope_700Bold',
+  extrabold: 'Manrope_800ExtraBold',
 };
 
 export const radius = {
@@ -32,7 +48,7 @@ export const spacing = {
 export const shadow = {
   shadowColor: '#000',
   shadowOffset: { width: 0, height: 6 },
-  shadowOpacity: 0.35,
+  shadowOpacity: 0.4,
   shadowRadius: 12,
   elevation: 6,
 };

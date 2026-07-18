@@ -5,7 +5,7 @@ import { players, courts } from '../data/mockData';
 import { Player } from '../data/types';
 import { findMatches, MatchResult } from '../logic/matching';
 import MatchCard from '../components/MatchCard';
-import { colors, radius, spacing } from '../theme';
+import { colors, fonts, radius, spacing } from '../theme';
 
 type SortMode = 'best' | 'closest' | 'skill' | 'availability';
 
@@ -43,7 +43,7 @@ export default function BrowseScreen({ me }: Props) {
   return (
     <View style={styles.container}>
       <View style={styles.sectionHeader}>
-        <Text style={styles.title}>Find a game</Text>
+        <Text style={styles.title}>FIND A GAME</Text>
         <Text style={styles.subtitle}>{me.availability.length} slot(s) active this week</Text>
       </View>
 
@@ -90,11 +90,13 @@ const styles = StyleSheet.create({
   },
   title: {
     color: colors.text,
-    fontSize: 22,
-    fontWeight: '800',
+    fontFamily: fonts.display,
+    fontSize: 26,
+    letterSpacing: 0.4,
   },
   subtitle: {
     color: colors.textMuted,
+    fontFamily: fonts.medium,
     fontSize: 13,
     marginTop: 3,
   },
@@ -109,7 +111,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: radius.pill,
+    borderRadius: radius.sm,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
@@ -123,8 +125,8 @@ const styles = StyleSheet.create({
   },
   filterText: {
     color: colors.textMuted,
+    fontFamily: fonts.bold,
     fontSize: 12,
-    fontWeight: '600',
   },
   filterTextActive: {
     color: colors.accentText,
