@@ -14,8 +14,11 @@ function skillMatchMeta(skillDiff: number): { label: string; color: string } {
   return { label: 'Bigger skill gap — good for a friendly', color: colors.textMuted };
 }
 
+type MatchMode = 'casual' | 'competitive';
+
 export default function MatchCard({ match }: Props) {
   const [requested, setRequested] = useState(false);
+  const [mode, setMode] = useState<MatchMode>('casual');
   const { player, score, skillDiff, suggestedBookings } = match;
   const best = suggestedBookings[0];
   const skillMeta = skillMatchMeta(skillDiff);
@@ -73,6 +76,35 @@ export default function MatchCard({ match }: Props) {
         </View>
       )}
 
+      {!requested && (
+        <View style={styles.modeRow}>
+          <Pressable
+            style={[styles.modeChip, mode === 'casual' && styles.modeChipActive]}
+            onPress={() => setMode('casual')}
+          >
+            <Ionicons
+              name="happy-outline"
+              size={13}
+              color={mode === 'casual' ? colors.accentText : colors.textMuted}
+            />
+            <Text style={[styles.modeText, mode === 'casual' && styles.modeTextActive]}>Casual</Text>
+          </Pressable>
+          <Pressable
+            style={[styles.modeChip, mode === 'competitive' && styles.modeChipActive]}
+            onPress={() => setMode('competitive')}
+          >
+            <Ionicons
+              name="podium-outline"
+              size={13}
+              color={mode === 'competitive' ? colors.accentText : colors.textMuted}
+            />
+            <Text style={[styles.modeText, mode === 'competitive' && styles.modeTextActive]}>
+              Competitive · affects ELO
+            </Text>
+          </Pressable>
+        </View>
+      )}
+
       <Pressable
         style={({ pressed }) => [
           styles.button,
@@ -84,7 +116,9 @@ export default function MatchCard({ match }: Props) {
       >
         {requested && <Ionicons name="checkmark-circle" size={16} color={colors.success} style={styles.buttonIcon} />}
         <Text style={[styles.buttonText, requested && styles.buttonTextRequested]}>
-          {requested ? 'Request sent' : 'Send match request'}
+          {requested
+            ? `${mode === 'casual' ? 'Casual' : 'Competitive'} request sent`
+            : 'Send match request'}
         </Text>
       </Pressable>
     </View>
@@ -237,6 +271,34 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 12,
     flex: 1,
+  },
+  modeRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: spacing.sm,
+  },
+  modeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  modeChipActive: {
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
+  },
+  modeText: {
+    color: colors.textMuted,
+    fontSize: 11.5,
+    fontWeight: '600',
+  },
+  modeTextActive: {
+    color: colors.accentText,
   },
   button: {
     flexDirection: 'row',

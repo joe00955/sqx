@@ -1,4 +1,4 @@
-import { Court, Player, TimeSlot } from './types';
+import { Community, Court, Player, TimeSlot } from './types';
 
 export const currentUser: Player = {
   id: 'me',
@@ -14,13 +14,15 @@ export const currentUser: Player = {
     { day: 'Wed', start: '07:00', end: '09:00' },
     { day: 'Sat', start: '10:00', end: '13:00' },
   ],
+  competitiveElo: 1540,
+  casualGamesPlayed: 14,
 };
 
 export const courts: Court[] = [
   {
     id: 'riverside',
-    name: 'Riverside Squash Club',
-    address: '12 Riverside Way',
+    name: 'Squash Center Duisburg-Neudorf',
+    address: 'Sternbuschweg 12, 47057 Duisburg',
     distanceKm: 1.2,
     bookableSlots: [
       { day: 'Mon', start: '18:00', end: '21:00' },
@@ -30,8 +32,8 @@ export const courts: Court[] = [
   },
   {
     id: 'city-centre',
-    name: 'City Centre Courts',
-    address: '4 Exchange Square',
+    name: 'Sportpark Duisburg-Mitte',
+    address: 'Königstraße 4, 47051 Duisburg',
     distanceKm: 3.5,
     bookableSlots: [
       { day: 'Tue', start: '17:00', end: '20:00' },
@@ -41,8 +43,8 @@ export const courts: Court[] = [
   },
   {
     id: 'northside',
-    name: 'Northside Racquet Club',
-    address: '88 Northside Road',
+    name: 'TC Rheinhausen Racquet Club',
+    address: 'Bahnhofstraße 88, 47228 Duisburg',
     distanceKm: 6.8,
     bookableSlots: [
       { day: 'Mon', start: '19:00', end: '22:00' },
@@ -52,13 +54,48 @@ export const courts: Court[] = [
   },
   {
     id: 'westfield',
-    name: 'Westfield Leisure Centre',
-    address: '200 Westfield Road',
+    name: 'Sportzentrum Wedau',
+    address: 'Bertaallee 200, 47055 Duisburg',
     distanceKm: 9.4,
     bookableSlots: [
       { day: 'Wed', start: '08:00', end: '10:00' },
       { day: 'Sat', start: '08:00', end: '11:00' },
     ],
+  },
+];
+
+export const communities: Community[] = [
+  {
+    id: 'duisburg-social',
+    name: 'Duisburg Squash Social',
+    description: 'Low-key rallies and beginner-friendly meetups that rotate across Duisburg courts.',
+    meetupNote: 'Tuesdays 19:00 · rotates courts',
+    memberCount: 42,
+    vibe: 'Casual',
+  },
+  {
+    id: 'rhein-ruhr-ladder',
+    name: 'Rhein-Ruhr Ladder League',
+    description: 'Organized ELO ladder matches for players chasing a real regional ranking.',
+    meetupNote: 'Self-scheduled · results reported weekly',
+    memberCount: 27,
+    vibe: 'Competitive',
+  },
+  {
+    id: 'neudorf-beginners',
+    name: 'Neudorf Beginners Club',
+    description: "New to squash? Learn the ropes with patient partners, no pressure at all.",
+    meetupNote: 'Sundays 10:00 · Squash Center Duisburg-Neudorf',
+    memberCount: 19,
+    vibe: 'Casual',
+  },
+  {
+    id: 'wedau-club',
+    name: 'Wedau Club Ladder',
+    description: "Club members' internal ladder with both a casual track and a ranked track.",
+    meetupNote: 'Thursdays 18:00 · Sportzentrum Wedau',
+    memberCount: 33,
+    vibe: 'Mixed',
   },
 ];
 
@@ -75,6 +112,8 @@ export const players: Player[] = [
     homeCourtId: 'riverside',
     distanceKm: 2.1,
     availability: [slot('Mon', '18:30', '20:00'), slot('Sat', '11:00', '13:00')],
+    competitiveElo: 1510,
+    casualGamesPlayed: 21,
   },
   {
     id: 'tom',
@@ -86,6 +125,8 @@ export const players: Player[] = [
     homeCourtId: 'city-centre',
     distanceKm: 4.0,
     availability: [slot('Wed', '07:00', '08:30'), slot('Thu', '18:00', '19:30')],
+    competitiveElo: 1710,
+    casualGamesPlayed: 9,
   },
   {
     id: 'sofia',
@@ -97,6 +138,8 @@ export const players: Player[] = [
     homeCourtId: 'riverside',
     distanceKm: 1.5,
     availability: [slot('Sat', '09:30', '11:00'), slot('Mon', '18:00', '19:00')],
+    competitiveElo: 1320,
+    casualGamesPlayed: 30,
   },
   {
     id: 'dan',
@@ -108,6 +151,8 @@ export const players: Player[] = [
     homeCourtId: 'northside',
     distanceKm: 5.2,
     availability: [slot('Fri', '17:30', '19:00'), slot('Sun', '09:30', '11:00')],
+    competitiveElo: 1580,
+    casualGamesPlayed: 12,
   },
   {
     id: 'layla',
@@ -119,6 +164,8 @@ export const players: Player[] = [
     homeCourtId: 'city-centre',
     distanceKm: 3.3,
     availability: [slot('Sat', '10:00', '11:30')],
+    competitiveElo: 1200,
+    casualGamesPlayed: 8,
   },
   {
     id: 'marcus',
@@ -130,6 +177,8 @@ export const players: Player[] = [
     homeCourtId: 'northside',
     distanceKm: 7.9,
     availability: [slot('Mon', '19:00', '21:00')],
+    competitiveElo: 1860,
+    casualGamesPlayed: 5,
   },
   {
     id: 'grace',
@@ -141,6 +190,8 @@ export const players: Player[] = [
     homeCourtId: 'riverside',
     distanceKm: 0.9,
     availability: [slot('Wed', '07:30', '09:00'), slot('Sat', '10:30', '12:30')],
+    competitiveElo: 1525,
+    casualGamesPlayed: 26,
   },
   {
     id: 'owen',
@@ -152,5 +203,7 @@ export const players: Player[] = [
     homeCourtId: 'westfield',
     distanceKm: 6.1,
     availability: [slot('Wed', '08:00', '09:30')],
+    competitiveElo: 1460,
+    casualGamesPlayed: 17,
   },
 ];

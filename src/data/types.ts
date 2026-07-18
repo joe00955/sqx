@@ -24,4 +24,15 @@ export interface Player {
   homeCourtId: string;
   distanceKm: number; // distance from current user
   availability: TimeSlot[];
+  competitiveElo: number;
+  casualGamesPlayed: number;
+}
+
+export interface Community {
+  id: string;
+  name: string;
+  description: string;
+  meetupNote: string;
+  memberCount: number;
+  vibe: 'Casual' | 'Competitive' | 'Mixed';
 }
