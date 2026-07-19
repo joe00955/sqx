@@ -6,6 +6,7 @@ export interface PendingVerification {
   name: string;
   avatarUrl: string | null;
   videoUrl: string | null;
+  videoPath: string | null;
 }
 
 interface Result {
@@ -13,8 +14,8 @@ interface Result {
   loading: boolean;
   error: string | null;
   refetch: () => void;
-  approve: (userId: string) => Promise<void>;
-  reject: (userId: string) => Promise<void>;
+  approve: (userId: string, videoPath: string | null) => Promise<void>;
+  reject: (userId: string, videoPath: string | null) => Promise<void>;
 }
 
 const SIGNED_URL_TTL_SECONDS = 60 * 30;
@@ -44,7 +45,13 @@ export function useAdminVerifications(isAdmin: boolean): Result {
               .createSignedUrl(row.verification_video_path, SIGNED_URL_TTL_SECONDS);
             videoUrl = signed?.signedUrl ?? null;
           }
-          return { id: row.id, name: row.name, avatarUrl: row.avatar_url, videoUrl };
+          return {
+            id: row.id,
+            name: row.name,
+            avatarUrl: row.avatar_url,
+            videoUrl,
+            videoPath: row.verification_video_path,
+          };
         })
       );
       setPending(withVideoUrls);
@@ -56,11 +63,14 @@ export function useAdminVerifications(isAdmin: boolean): Result {
     refetch();
   }, [refetch]);
 
-  const setStatus = useCallback(async (userId: string, status: 'verified' | 'rejected') => {
+  // Once a decision is made the video has served its purpose — delete it rather
+  // than retain it indefinitely (GDPR storage-limitation: keep data only as long
+  // as it's needed for the purpose it was collected for).
+  const setStatus = useCallback(async (userId: string, status: 'verified' | 'rejected', videoPath: string | null) => {
     setError(null);
     const { data, error: updateError } = await supabase
       .from('profiles')
-      .update({ verification_status: status })
+      .update({ verification_status: status, verification_video_path: null })
       .eq('id', userId)
       .select('id');
 
@@ -74,11 +84,25 @@ export function useAdminVerifications(isAdmin: boolean): Result {
       );
       return;
     }
+
+    if (videoPath) {
+      const { error: removeError } = await supabase.storage.from('verification-videos').remove([videoPath]);
+      if (removeError) {
+        setError(`Status updated, but the video couldn't be deleted: ${removeError.message}`);
+      }
+    }
+
     setPending((prev) => prev.filter((p) => p.id !== userId));
   }, []);
 
-  const approve = useCallback((userId: string) => setStatus(userId, 'verified'), [setStatus]);
-  const reject = useCallback((userId: string) => setStatus(userId, 'rejected'), [setStatus]);
+  const approve = useCallback(
+    (userId: string, videoPath: string | null) => setStatus(userId, 'verified', videoPath),
+    [setStatus]
+  );
+  const reject = useCallback(
+    (userId: string, videoPath: string | null) => setStatus(userId, 'rejected', videoPath),
+    [setStatus]
+  );
 
   return { pending, loading, error, refetch, approve, reject };
 }

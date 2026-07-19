@@ -218,7 +218,8 @@ export default function ProfileScreen({
             <View style={styles.verifiedRow}>
               <Ionicons name="time-outline" size={18} color={colors.textMuted} />
               <Text style={styles.mutedSmallNoMargin}>
-                Your video is with our team for review. This usually doesn't take long.
+                Your video is with our team for review. This usually doesn't take long, and the video is
+                permanently deleted the moment a decision is made — we only keep the verified/not result.
               </Text>
             </View>
           ) : (
@@ -227,6 +228,8 @@ export default function ProfileScreen({
                 {verificationStatus === 'rejected'
                   ? "We couldn't confirm your last submission — add a real profile photo and a short video of your face, and we'll take another look."
                   : "Add a real profile photo, then upload a short video of your face so our team can confirm you're really you. This builds trust with players you meet in person."}
+                {' '}Your video is only ever used for this one check and is permanently deleted as soon as it's
+                reviewed — we never keep it, share it, or use it for anything else.
               </Text>
               <PressScale style={styles.verifyButton} onPress={() => videoInputRef.current?.click()} disabled={videoUploading}>
                 {videoUploading ? (

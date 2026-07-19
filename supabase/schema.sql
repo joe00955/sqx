@@ -193,3 +193,10 @@ create policy "admins can view any verification video" on storage.objects
     bucket_id = 'verification-videos'
     and exists (select 1 from profiles where profiles.id = auth.uid() and profiles.is_admin = true)
   );
+-- Admins delete the video the moment they approve/reject — see useAdminVerifications;
+-- GDPR storage-limitation means we don't keep it once its one-time purpose is served.
+create policy "admins can delete any verification video" on storage.objects
+  for delete using (
+    bucket_id = 'verification-videos'
+    and exists (select 1 from profiles where profiles.id = auth.uid() and profiles.is_admin = true)
+  );

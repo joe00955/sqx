@@ -10,8 +10,8 @@ interface Props {
   pending: PendingVerification[];
   loading: boolean;
   error?: string | null;
-  onApprove: (userId: string) => void;
-  onReject: (userId: string) => void;
+  onApprove: (userId: string, videoPath: string | null) => void;
+  onReject: (userId: string, videoPath: string | null) => void;
 }
 
 function ReviewCard({
@@ -20,8 +20,8 @@ function ReviewCard({
   onReject,
 }: {
   item: PendingVerification;
-  onApprove: (userId: string) => void;
-  onReject: (userId: string) => void;
+  onApprove: (userId: string, videoPath: string | null) => void;
+  onReject: (userId: string, videoPath: string | null) => void;
 }) {
   return (
     <View style={styles.card}>
@@ -39,12 +39,20 @@ function ReviewCard({
         </View>
       )}
 
+      <Text style={styles.retentionNote}>The video is permanently deleted the moment you approve or reject.</Text>
+
       <View style={styles.actionRow}>
-        <PressScale style={[styles.actionButton, styles.rejectButton]} onPress={() => onReject(item.id)}>
+        <PressScale
+          style={[styles.actionButton, styles.rejectButton]}
+          onPress={() => onReject(item.id, item.videoPath)}
+        >
           <Ionicons name="close-outline" size={16} color={colors.textMuted} />
           <Text style={styles.rejectText}>Reject</Text>
         </PressScale>
-        <PressScale style={[styles.actionButton, styles.approveButton]} onPress={() => onApprove(item.id)}>
+        <PressScale
+          style={[styles.actionButton, styles.approveButton]}
+          onPress={() => onApprove(item.id, item.videoPath)}
+        >
           <Ionicons name="shield-checkmark-outline" size={16} color={colors.accentText} />
           <Text style={styles.approveText}>Approve</Text>
         </PressScale>
@@ -167,6 +175,12 @@ const styles = StyleSheet.create({
     color: colors.textFaint,
     fontFamily: fonts.medium,
     fontSize: 12.5,
+  },
+  retentionNote: {
+    color: colors.textFaint,
+    fontFamily: fonts.medium,
+    fontSize: 11.5,
+    marginBottom: spacing.md,
   },
   actionRow: {
     flexDirection: 'row',

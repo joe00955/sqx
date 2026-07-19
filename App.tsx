@@ -293,7 +293,7 @@ function AppShell() {
         {legalPage === 'privacy' ? (
           <LegalScreen
             title="Privacy Policy"
-            body="SquashX Rally is an early-access product. Creating an account stores your profile (name, skill level, availability, home court), and — if you allow it — your approximate location, used only to show distance and sort matches. Your email is only shared with another player after you both agree to a match, so you can arrange to play. You can report or block another player at any time; reports are reviewed by the SquashX team and are not visible to other players. This is not yet a full legal privacy policy — one will be published before a commercial launch."
+            body="SquashX Rally is an early-access product. Creating an account stores your profile (name, skill level, availability, home court), and — if you allow it — your approximate location, used only to show distance and sort matches. Your email is only shared with another player after you both agree to a match, so you can arrange to play. If you choose to verify your account, your profile photo and a short verification video are used only to confirm it's really you — the video is reviewed once by our team and permanently deleted the moment a decision is made; we keep only the verified/not-verified result, never the footage itself. You can report or block another player at any time; reports are reviewed by the SquashX team and are not visible to other players. This is not yet a full legal privacy policy — one will be published before a commercial launch."
             onBack={() => setLegalPage(null)}
           />
         ) : legalPage === 'terms' ? (
