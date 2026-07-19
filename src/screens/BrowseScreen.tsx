@@ -1,9 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { players } from '../data/mockData';
 import { Court, MatchMode, Player } from '../data/types';
-import { findMatches, MatchResult } from '../logic/matching';
+import { findMatches, MatchResult, SuggestedBooking } from '../logic/matching';
 import SwipeCard from '../components/SwipeCard';
 import PressScale from '../components/PressScale';
 import { colors, fonts, radius, spacing } from '../theme';
@@ -36,22 +35,30 @@ const STACK_DEPTH = 3;
 
 interface Props {
   me: Player;
+  players: Player[];
   courts: Court[];
+  onSendRequest?: (player: Player, mode: MatchMode, booking: SuggestedBooking) => void;
 }
 
-export default function BrowseScreen({ me, courts }: Props) {
+export default function BrowseScreen({ me, players, courts, onSendRequest }: Props) {
   const [sortMode, setSortMode] = useState<SortMode>('best');
   const [mode, setMode] = useState<MatchMode>('casual');
   const [dismissed, setDismissed] = useState<Record<string, boolean>>({});
 
-  const allMatches = useMemo(() => findMatches(me, players, courts), [me, courts]);
+  const allMatches = useMemo(() => findMatches(me, players, courts), [me, players, courts]);
   const sorted = useMemo(() => sortMatches(allMatches, sortMode), [allMatches, sortMode]);
   const remaining = useMemo(() => sorted.filter((m) => !dismissed[m.player.id]), [sorted, dismissed]);
   const visibleStack = remaining.slice(0, STACK_DEPTH);
-  const topId = visibleStack[0]?.player.id;
 
   const dismiss = (playerId: string) => setDismissed((prev) => ({ ...prev, [playerId]: true }));
   const startOver = () => setDismissed({});
+
+  const handleSwipe = (match: MatchResult, direction: 'left' | 'right') => {
+    if (direction === 'right' && onSendRequest && match.suggestedBookings.length > 0) {
+      onSendRequest(match.player, mode, match.suggestedBookings[0]);
+    }
+    dismiss(match.player.id);
+  };
 
   return (
     <View style={styles.container}>
@@ -121,7 +128,7 @@ export default function BrowseScreen({ me, courts }: Props) {
                   mode={mode}
                   active={stackIndex === 0}
                   stackIndex={stackIndex}
-                  onSwipe={() => dismiss(match.player.id)}
+                  onSwipe={(direction) => handleSwipe(match, direction)}
                 />
               );
             })
@@ -130,10 +137,16 @@ export default function BrowseScreen({ me, courts }: Props) {
 
       {visibleStack.length > 0 && (
         <View style={styles.actionRow}>
-          <PressScale style={[styles.actionButton, styles.passButton]} onPress={() => topId && dismiss(topId)}>
+          <PressScale
+            style={[styles.actionButton, styles.passButton]}
+            onPress={() => handleSwipe(visibleStack[0], 'left')}
+          >
             <Ionicons name="close" size={22} color={colors.textMuted} />
           </PressScale>
-          <PressScale style={[styles.actionButton, styles.requestButton]} onPress={() => topId && dismiss(topId)}>
+          <PressScale
+            style={[styles.actionButton, styles.requestButton]}
+            onPress={() => handleSwipe(visibleStack[0], 'right')}
+          >
             <Ionicons name="flash" size={22} color={colors.accentText} />
           </PressScale>
         </View>

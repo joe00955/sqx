@@ -24,8 +24,8 @@ import AuthScreen from './src/screens/AuthScreen';
 import Logo from './src/components/Logo';
 import AccentMotif from './src/components/AccentMotif';
 import FadeIn from './src/components/FadeIn';
-import { communities, currentUser, incomingRequests } from './src/data/mockData';
-import { IncomingRequest, Player, RequestStatus, TimeSlot } from './src/data/types';
+import { currentUser } from './src/data/mockData';
+import { Player, RequestStatus, TimeSlot } from './src/data/types';
 import { skillLabelFor } from './src/logic/skill';
 import { slotKey } from './src/logic/slotKey';
 import { colors, fonts, gradients, radius, spacing } from './src/theme';
@@ -33,6 +33,9 @@ import { isSupabaseConfigured } from './src/lib/supabase';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { useCourts } from './src/hooks/useCourts';
 import { useProfile } from './src/hooks/useProfile';
+import { usePlayers } from './src/hooks/usePlayers';
+import { useCommunities } from './src/hooks/useCommunities';
+import { useMatchRequests } from './src/hooks/useMatchRequests';
 
 type Tab = 'browse' | 'requests' | 'communities' | 'ladders' | 'profile';
 
@@ -141,13 +144,16 @@ function AppShell() {
     casualGamesPlayed: currentUser.casualGamesPlayed,
   });
 
-  const [joinedCommunities, setJoinedCommunities] = useState<Record<string, boolean>>({});
-  const [requests, setRequests] = useState<IncomingRequest[]>(incomingRequests);
-
   const { courts: liveCourts } = useCourts();
   const { session, loading: authLoading, signOut } = useAuth();
   const userId = isSupabaseConfigured ? session?.user?.id ?? null : null;
   const profile = useProfile(userId);
+  const { players: livePlayers } = usePlayers(userId);
+  const { communities: liveCommunities, joined: joinedCommunities, toggleJoin: toggleCommunity } = useCommunities(
+    userId,
+    livePlayers
+  );
+  const { requests, respond: respondToRequest, sendRequest } = useMatchRequests(userId);
 
   const toggleSlot = (key: string) => {
     if (isSupabaseConfigured) {
@@ -157,9 +163,6 @@ function AppShell() {
     }
     setActiveSlots((prev) => ({ ...prev, [key]: !prev[key] }));
   };
-  const toggleCommunity = (id: string) => setJoinedCommunities((prev) => ({ ...prev, [id]: !prev[id] }));
-  const respondToRequest = (id: string, status: RequestStatus) =>
-    setRequests((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
 
   const handleTabPress = (key: Tab) => {
     setTab(key);
@@ -302,27 +305,38 @@ function AppShell() {
     );
   }
 
-  const selectedCommunity = selectedCommunityId ? communities.find((c) => c.id === selectedCommunityId) : null;
+  const selectedCommunity = selectedCommunityId ? liveCommunities.find((c) => c.id === selectedCommunityId) : null;
 
   const activeScreen =
     tab === 'browse' ? (
-      <BrowseScreen me={me} courts={liveCourts} />
+      <BrowseScreen
+        me={me}
+        players={livePlayers}
+        courts={liveCourts}
+        onSendRequest={(player, mode, booking) => sendRequest({ toUserId: player.id, mode, booking })}
+      />
     ) : tab === 'requests' ? (
-      <RequestsScreen requests={requests} onRespond={respondToRequest} />
+      <RequestsScreen requests={requests} players={livePlayers} courts={liveCourts} onRespond={respondToRequest} />
     ) : tab === 'communities' ? (
       selectedCommunity ? (
         <CommunityDetailScreen
           community={selectedCommunity}
           me={me}
+          players={livePlayers}
           isJoined={!!joinedCommunities[selectedCommunity.id]}
           onToggleJoin={() => toggleCommunity(selectedCommunity.id)}
           onBack={() => setSelectedCommunityId(null)}
         />
       ) : (
-        <CommunitiesScreen joined={joinedCommunities} onToggleJoin={toggleCommunity} onOpenDetail={setSelectedCommunityId} />
+        <CommunitiesScreen
+          communities={liveCommunities}
+          joined={joinedCommunities}
+          onToggleJoin={toggleCommunity}
+          onOpenDetail={setSelectedCommunityId}
+        />
       )
     ) : tab === 'ladders' ? (
-      <LaddersScreen me={me} />
+      <LaddersScreen me={me} players={livePlayers} />
     ) : (
       <ProfileScreen
         me={me}

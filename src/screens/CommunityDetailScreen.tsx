@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { players } from '../data/mockData';
 import { Community, Player } from '../data/types';
 import Avatar from '../components/Avatar';
 import PressScale from '../components/PressScale';
@@ -10,6 +9,7 @@ import { colors, fonts, radius, shadow, spacing } from '../theme';
 interface Props {
   community: Community;
   me: Player;
+  players: Player[];
   isJoined: boolean;
   onToggleJoin: () => void;
   onBack: () => void;
@@ -21,10 +21,10 @@ const vibeColor: Record<Community['vibe'], string> = {
   Mixed: colors.textMuted,
 };
 
-export default function CommunityDetailScreen({ community, me, isJoined, onToggleJoin, onBack }: Props) {
+export default function CommunityDetailScreen({ community, me, players, isJoined, onToggleJoin, onBack }: Props) {
   const members = useMemo(
     () => community.memberIds.map((id) => players.find((p) => p.id === id)).filter((p): p is Player => !!p),
-    [community.memberIds]
+    [community.memberIds, players]
   );
 
   const ladder = useMemo(() => {

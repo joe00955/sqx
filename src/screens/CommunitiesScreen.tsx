@@ -1,12 +1,12 @@
 import React from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { communities } from '../data/mockData';
 import { Community } from '../data/types';
 import PressScale from '../components/PressScale';
 import { colors, fonts, radius, shadow, spacing } from '../theme';
 
 interface Props {
+  communities: Community[];
   joined: Record<string, boolean>;
   onToggleJoin: (id: string) => void;
   onOpenDetail: (id: string) => void;
@@ -74,7 +74,7 @@ function CommunityCard({
   );
 }
 
-export default function CommunitiesScreen({ joined, onToggleJoin, onOpenDetail }: Props) {
+export default function CommunitiesScreen({ communities, joined, onToggleJoin, onOpenDetail }: Props) {
   return (
     <View style={styles.container}>
       <View style={styles.sectionHeader}>

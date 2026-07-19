@@ -1,18 +1,29 @@
 import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { courts, players } from '../data/mockData';
-import { IncomingRequest, RequestStatus } from '../data/types';
+import { Court, IncomingRequest, Player, RequestStatus } from '../data/types';
 import Avatar from '../components/Avatar';
 import PressScale from '../components/PressScale';
 import { colors, fonts, radius, shadow, spacing } from '../theme';
 
 interface Props {
   requests: IncomingRequest[];
+  players: Player[];
+  courts: Court[];
   onRespond: (id: string, status: RequestStatus) => void;
 }
 
-function RequestCard({ request, onRespond }: { request: IncomingRequest; onRespond: (id: string, status: RequestStatus) => void }) {
+function RequestCard({
+  request,
+  players,
+  courts,
+  onRespond,
+}: {
+  request: IncomingRequest;
+  players: Player[];
+  courts: Court[];
+  onRespond: (id: string, status: RequestStatus) => void;
+}) {
   const player = players.find((p) => p.id === request.playerId);
   const court = courts.find((c) => c.id === request.courtId);
   if (!player || !court) return null;
@@ -83,7 +94,7 @@ function EmptyPendingState() {
   );
 }
 
-export default function RequestsScreen({ requests, onRespond }: Props) {
+export default function RequestsScreen({ requests, players, courts, onRespond }: Props) {
   const pending = useMemo(() => requests.filter((r) => r.status === 'pending'), [requests]);
   const resolved = useMemo(() => requests.filter((r) => r.status !== 'pending'), [requests]);
 
@@ -98,14 +109,14 @@ export default function RequestsScreen({ requests, onRespond }: Props) {
         {pending.length === 0 ? (
           <EmptyPendingState />
         ) : (
-          pending.map((r) => <RequestCard key={r.id} request={r} onRespond={onRespond} />)
+          pending.map((r) => <RequestCard key={r.id} request={r} players={players} courts={courts} onRespond={onRespond} />)
         )}
 
         {resolved.length > 0 && (
           <>
             <Text style={styles.resolvedHeading}>RESOLVED</Text>
             {resolved.map((r) => (
-              <RequestCard key={r.id} request={r} onRespond={onRespond} />
+              <RequestCard key={r.id} request={r} players={players} courts={courts} onRespond={onRespond} />
             ))}
           </>
         )}
