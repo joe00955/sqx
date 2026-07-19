@@ -20,6 +20,7 @@ import RequestsScreen from './src/screens/RequestsScreen';
 import OnboardingScreen from './src/screens/OnboardingScreen';
 import SquashXHomeScreen from './src/screens/SquashXHomeScreen';
 import LegalScreen from './src/screens/LegalScreen';
+import AuthScreen from './src/screens/AuthScreen';
 import Logo from './src/components/Logo';
 import AccentMotif from './src/components/AccentMotif';
 import FadeIn from './src/components/FadeIn';
@@ -28,6 +29,10 @@ import { IncomingRequest, Player, RequestStatus, TimeSlot } from './src/data/typ
 import { skillLabelFor } from './src/logic/skill';
 import { slotKey } from './src/logic/slotKey';
 import { colors, fonts, gradients, radius, spacing } from './src/theme';
+import { isSupabaseConfigured } from './src/lib/supabase';
+import { AuthProvider, useAuth } from './src/context/AuthContext';
+import { useCourts } from './src/hooks/useCourts';
+import { useProfile } from './src/hooks/useProfile';
 
 type Tab = 'browse' | 'requests' | 'communities' | 'ladders' | 'profile';
 
@@ -77,7 +82,7 @@ function routeForPath(pathname: string): Route {
 
 const initialRoute: Route = isWeb ? routeForPath(window.location.pathname) : { view: 'hub', tab: 'browse' };
 
-export default function App() {
+function AppShell() {
   const [antonLoaded] = useAnton({ Anton_400Regular });
   const [manropeLoaded] = useManrope({
     Manrope_400Regular,
@@ -139,7 +144,19 @@ export default function App() {
   const [joinedCommunities, setJoinedCommunities] = useState<Record<string, boolean>>({});
   const [requests, setRequests] = useState<IncomingRequest[]>(incomingRequests);
 
-  const toggleSlot = (key: string) => setActiveSlots((prev) => ({ ...prev, [key]: !prev[key] }));
+  const { courts: liveCourts } = useCourts();
+  const { session, loading: authLoading, signOut } = useAuth();
+  const userId = isSupabaseConfigured ? session?.user?.id ?? null : null;
+  const profile = useProfile(userId);
+
+  const toggleSlot = (key: string) => {
+    if (isSupabaseConfigured) {
+      const slot = profile.baseAvailability.find((s) => slotKey(s) === key);
+      if (slot) profile.toggleSlotActive(slot);
+      return;
+    }
+    setActiveSlots((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
   const toggleCommunity = (id: string) => setJoinedCommunities((prev) => ({ ...prev, [id]: !prev[id] }));
   const respondToRequest = (id: string, status: RequestStatus) =>
     setRequests((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
@@ -149,12 +166,16 @@ export default function App() {
     setSelectedCommunityId(null);
   };
 
-  const handleOnboardingComplete = (result: {
+  const handleOnboardingComplete = async (result: {
     name: string;
     skillLevel: number;
     homeCourtId: string;
     availability: TimeSlot[];
   }) => {
+    if (isSupabaseConfigured) {
+      await profile.createProfile(result);
+      return;
+    }
     setName(result.name);
     setSkillLevel(result.skillLevel);
     setHomeCourtId(result.homeCourtId);
@@ -165,8 +186,31 @@ export default function App() {
     setOnboarded(true);
   };
 
-  const me: Player = useMemo(
-    () => ({
+  const onSkillChange = (level: number) => {
+    if (isSupabaseConfigured) {
+      profile.updateSkillLevel(level);
+      return;
+    }
+    setSkillLevel(level);
+  };
+
+  const me: Player = useMemo(() => {
+    if (isSupabaseConfigured) {
+      return {
+        id: userId ?? 'me',
+        name: profile.name,
+        initials: initialsFor(profile.name || '?'),
+        skillLevel: profile.skillLevel,
+        skillLabel: skillLabelFor(profile.skillLevel),
+        bio: profile.bio,
+        homeCourtId: profile.homeCourtId ?? '',
+        distanceKm: 0,
+        availability: profile.baseAvailability.filter((slot) => profile.activeSlots[slotKey(slot)]),
+        competitiveElo: profile.competitiveElo,
+        casualGamesPlayed: profile.casualGamesPlayed,
+      };
+    }
+    return {
       id: 'me',
       name,
       initials: initialsFor(name),
@@ -178,9 +222,8 @@ export default function App() {
       availability: baseAvailability.filter((slot) => activeSlots[slotKey(slot)]),
       competitiveElo: stats.competitiveElo,
       casualGamesPlayed: stats.casualGamesPlayed,
-    }),
-    [name, bio, skillLevel, homeCourtId, baseAvailability, activeSlots, stats]
-  );
+    };
+  }, [userId, profile, name, bio, skillLevel, homeCourtId, baseAvailability, activeSlots, stats]);
 
   const pendingCount = requests.filter((r) => r.status === 'pending').length;
 
@@ -224,11 +267,37 @@ export default function App() {
     );
   }
 
-  if (!onboarded) {
+  if (isSupabaseConfigured && (authLoading || (session && profile.loading))) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <StatusBar barStyle="light-content" backgroundColor={colors.background} />
-        <OnboardingScreen onComplete={handleOnboardingComplete} onSkip={() => setOnboarded(true)} />
+        <View style={styles.loadingScreen}>
+          <ActivityIndicator color={colors.accent} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (isSupabaseConfigured && !session) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <StatusBar barStyle="light-content" backgroundColor={colors.background} />
+        <AuthScreen />
+      </SafeAreaView>
+    );
+  }
+
+  const needsOnboarding = isSupabaseConfigured ? !profile.exists : !onboarded;
+
+  if (needsOnboarding) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <StatusBar barStyle="light-content" backgroundColor={colors.background} />
+        <OnboardingScreen
+          courts={liveCourts}
+          onComplete={handleOnboardingComplete}
+          onSkip={isSupabaseConfigured ? undefined : () => setOnboarded(true)}
+        />
       </SafeAreaView>
     );
   }
@@ -237,7 +306,7 @@ export default function App() {
 
   const activeScreen =
     tab === 'browse' ? (
-      <BrowseScreen me={me} />
+      <BrowseScreen me={me} courts={liveCourts} />
     ) : tab === 'requests' ? (
       <RequestsScreen requests={requests} onRespond={respondToRequest} />
     ) : tab === 'communities' ? (
@@ -257,11 +326,13 @@ export default function App() {
     ) : (
       <ProfileScreen
         me={me}
-        baseAvailability={baseAvailability}
-        skillLevel={skillLevel}
-        onSkillChange={setSkillLevel}
-        activeSlots={activeSlots}
+        courts={liveCourts}
+        baseAvailability={isSupabaseConfigured ? profile.baseAvailability : baseAvailability}
+        skillLevel={me.skillLevel}
+        onSkillChange={onSkillChange}
+        activeSlots={isSupabaseConfigured ? profile.activeSlots : activeSlots}
         onToggleSlot={toggleSlot}
+        onSignOut={isSupabaseConfigured ? signOut : undefined}
       />
     );
 
@@ -343,6 +414,14 @@ export default function App() {
         })}
       </View>
     </SafeAreaView>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppShell />
+    </AuthProvider>
   );
 }
 

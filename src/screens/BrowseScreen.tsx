@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { players, courts } from '../data/mockData';
-import { MatchMode, Player } from '../data/types';
+import { players } from '../data/mockData';
+import { Court, MatchMode, Player } from '../data/types';
 import { findMatches, MatchResult } from '../logic/matching';
 import SwipeCard from '../components/SwipeCard';
 import PressScale from '../components/PressScale';
@@ -36,14 +36,15 @@ const STACK_DEPTH = 3;
 
 interface Props {
   me: Player;
+  courts: Court[];
 }
 
-export default function BrowseScreen({ me }: Props) {
+export default function BrowseScreen({ me, courts }: Props) {
   const [sortMode, setSortMode] = useState<SortMode>('best');
   const [mode, setMode] = useState<MatchMode>('casual');
   const [dismissed, setDismissed] = useState<Record<string, boolean>>({});
 
-  const allMatches = useMemo(() => findMatches(me, players, courts), [me]);
+  const allMatches = useMemo(() => findMatches(me, players, courts), [me, courts]);
   const sorted = useMemo(() => sortMatches(allMatches, sortMode), [allMatches, sortMode]);
   const remaining = useMemo(() => sorted.filter((m) => !dismissed[m.player.id]), [sorted, dismissed]);
   const visibleStack = remaining.slice(0, STACK_DEPTH);

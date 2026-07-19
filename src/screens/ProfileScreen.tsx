@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { courts } from '../data/mockData';
-import { Player, TimeSlot } from '../data/types';
+import { Court, Player, TimeSlot } from '../data/types';
 import { skillLabelFor } from '../logic/skill';
 import { computeSkillLevel, skillQuizQuestions } from '../logic/skillQuiz';
 import { slotKey } from '../logic/slotKey';
@@ -13,17 +12,28 @@ import { colors, fonts, radius, spacing } from '../theme';
 
 interface Props {
   me: Player;
+  courts: Court[];
   baseAvailability: TimeSlot[];
   skillLevel: number;
   onSkillChange: (level: number) => void;
   activeSlots: Record<string, boolean>;
   onToggleSlot: (key: string) => void;
+  onSignOut?: () => void;
 }
 
 const MIN_SKILL = 1;
 const MAX_SKILL = 5;
 
-export default function ProfileScreen({ me, baseAvailability, skillLevel, onSkillChange, activeSlots, onToggleSlot }: Props) {
+export default function ProfileScreen({
+  me,
+  courts,
+  baseAvailability,
+  skillLevel,
+  onSkillChange,
+  activeSlots,
+  onToggleSlot,
+  onSignOut,
+}: Props) {
   const homeCourt = courts.find((c) => c.id === me.homeCourtId);
   const skillFraction = (skillLevel - MIN_SKILL) / (MAX_SKILL - MIN_SKILL);
 
@@ -140,6 +150,13 @@ export default function ProfileScreen({ me, baseAvailability, skillLevel, onSkil
           })}
         </View>
       </View>
+
+      {onSignOut && (
+        <Pressable style={styles.signOutButton} onPress={onSignOut} hitSlop={8}>
+          <Ionicons name="log-out-outline" size={15} color={colors.danger} />
+          <Text style={styles.signOutText}>Sign out</Text>
+        </Pressable>
+      )}
     </ScrollView>
   );
 }
@@ -338,5 +355,18 @@ const styles = StyleSheet.create({
   slotChipTextInactive: {
     color: colors.textFaint,
     textDecorationLine: 'line-through',
+  },
+  signOutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: spacing.md,
+    paddingVertical: 12,
+  },
+  signOutText: {
+    color: colors.danger,
+    fontFamily: fonts.bold,
+    fontSize: 13,
   },
 });

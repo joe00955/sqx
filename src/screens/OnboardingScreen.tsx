@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { availabilityPresets, courts } from '../data/mockData';
-import { TimeSlot } from '../data/types';
+import { availabilityPresets } from '../data/mockData';
+import { Court, TimeSlot } from '../data/types';
 import { computeSkillLevel, skillQuizQuestions } from '../logic/skillQuiz';
 import { slotKey } from '../logic/slotKey';
 import Logo from '../components/Logo';
@@ -19,13 +19,14 @@ interface OnboardingResult {
 }
 
 interface Props {
+  courts: Court[];
   onComplete: (result: OnboardingResult) => void;
-  onSkip: () => void;
+  onSkip?: () => void;
 }
 
 const STEP_COUNT = 4;
 
-export default function OnboardingScreen({ onComplete, onSkip }: Props) {
+export default function OnboardingScreen({ courts, onComplete, onSkip }: Props) {
   const [step, setStep] = useState(0);
   const [name, setName] = useState('');
   const [quizAnswers, setQuizAnswers] = useState<(number | null)[]>(() => skillQuizQuestions.map(() => null));
@@ -66,9 +67,11 @@ export default function OnboardingScreen({ onComplete, onSkip }: Props) {
     <View style={styles.container}>
       <View style={styles.topRow}>
         <Logo size="lg" />
-        <Pressable onPress={onSkip} hitSlop={8}>
-          <Text style={styles.skipText}>Skip for now</Text>
-        </Pressable>
+        {onSkip && (
+          <Pressable onPress={onSkip} hitSlop={8}>
+            <Text style={styles.skipText}>Skip for now</Text>
+          </Pressable>
+        )}
       </View>
 
       <View style={styles.progressRow}>
