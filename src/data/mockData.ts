@@ -1,4 +1,4 @@
-import { Community, Court, Player, TimeSlot } from './types';
+import { Community, Court, IncomingRequest, Player, TimeSlot } from './types';
 
 export const currentUser: Player = {
   id: 'me',
@@ -72,6 +72,7 @@ export const communities: Community[] = [
     meetupNote: 'Tuesdays 19:00 · rotates courts',
     memberCount: 42,
     vibe: 'Casual',
+    memberIds: ['priya', 'grace', 'owen'],
   },
   {
     id: 'rhein-ruhr-ladder',
@@ -80,6 +81,7 @@ export const communities: Community[] = [
     meetupNote: 'Self-scheduled · results reported weekly',
     memberCount: 27,
     vibe: 'Competitive',
+    memberIds: ['marcus', 'tom', 'dan'],
   },
   {
     id: 'neudorf-beginners',
@@ -88,6 +90,7 @@ export const communities: Community[] = [
     meetupNote: 'Sundays 10:00 · Squash Center Duisburg-Neudorf',
     memberCount: 19,
     vibe: 'Casual',
+    memberIds: ['layla', 'sofia', 'owen'],
   },
   {
     id: 'wedau-club',
@@ -96,6 +99,7 @@ export const communities: Community[] = [
     meetupNote: 'Thursdays 18:00 · Sportzentrum Wedau',
     memberCount: 33,
     vibe: 'Mixed',
+    memberIds: ['grace', 'dan', 'priya'],
   },
 ];
 
@@ -205,5 +209,56 @@ export const players: Player[] = [
     availability: [slot('Wed', '08:00', '09:30')],
     competitiveElo: 1460,
     casualGamesPlayed: 17,
+  },
+];
+
+export const availabilityPresets: TimeSlot[] = [
+  slot('Mon', '18:00', '20:00'),
+  slot('Tue', '18:00', '20:00'),
+  slot('Wed', '07:00', '09:00'),
+  slot('Sat', '10:00', '13:00'),
+  slot('Sun', '10:00', '13:00'),
+];
+
+export const incomingRequests: IncomingRequest[] = [
+  {
+    id: 'req-1',
+    playerId: 'dan',
+    mode: 'casual',
+    day: 'Sun',
+    start: '09:30',
+    end: '11:00',
+    courtId: 'northside',
+    status: 'pending',
+  },
+  {
+    id: 'req-2',
+    playerId: 'marcus',
+    mode: 'competitive',
+    day: 'Mon',
+    start: '19:00',
+    end: '20:00',
+    courtId: 'northside',
+    status: 'pending',
+  },
+  {
+    id: 'req-3',
+    playerId: 'owen',
+    mode: 'casual',
+    day: 'Wed',
+    start: '08:00',
+    end: '09:00',
+    courtId: 'westfield',
+    status: 'pending',
+  },
+  {
+    id: 'req-4',
+    playerId: 'layla',
+    mode: 'casual',
+    day: 'Sat',
+    start: '10:00',
+    end: '11:00',
+    courtId: 'riverside',
+    status: 'accepted',
   },
 ];

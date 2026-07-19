@@ -3,11 +3,13 @@ import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { communities } from '../data/mockData';
 import { Community } from '../data/types';
+import PressScale from '../components/PressScale';
 import { colors, fonts, radius, shadow, spacing } from '../theme';
 
 interface Props {
   joined: Record<string, boolean>;
   onToggleJoin: (id: string) => void;
+  onOpenDetail: (id: string) => void;
 }
 
 const vibeColor: Record<Community['vibe'], string> = {
@@ -16,34 +18,46 @@ const vibeColor: Record<Community['vibe'], string> = {
   Mixed: colors.textMuted,
 };
 
-function CommunityCard({ community, isJoined, onToggle }: { community: Community; isJoined: boolean; onToggle: () => void }) {
+function CommunityCard({
+  community,
+  isJoined,
+  onToggle,
+  onOpenDetail,
+}: {
+  community: Community;
+  isJoined: boolean;
+  onToggle: () => void;
+  onOpenDetail: () => void;
+}) {
   const memberCount = community.memberCount + (isJoined ? 1 : 0);
   return (
     <View style={styles.card}>
-      <View style={styles.headerRow}>
-        <Text style={styles.name}>{community.name}</Text>
-        <View style={[styles.vibeTag, { borderColor: vibeColor[community.vibe] }]}>
-          <Text style={[styles.vibeText, { color: vibeColor[community.vibe] }]}>{community.vibe}</Text>
+      <Pressable onPress={onOpenDetail}>
+        <View style={styles.headerRow}>
+          <Text style={styles.name}>{community.name}</Text>
+          <View style={[styles.vibeTag, { borderColor: vibeColor[community.vibe] }]}>
+            <Text style={[styles.vibeText, { color: vibeColor[community.vibe] }]}>{community.vibe}</Text>
+          </View>
         </View>
-      </View>
 
-      <Text style={styles.description}>{community.description}</Text>
+        <Text style={styles.description}>{community.description}</Text>
 
-      <View style={styles.metaRow}>
-        <Ionicons name="calendar-outline" size={13} color={colors.textMuted} />
-        <Text style={styles.metaText}>{community.meetupNote}</Text>
-      </View>
-      <View style={styles.metaRow}>
-        <Ionicons name="people-outline" size={13} color={colors.textMuted} />
-        <Text style={styles.metaText}>{memberCount} members</Text>
-      </View>
+        <View style={styles.metaRow}>
+          <Ionicons name="calendar-outline" size={13} color={colors.textMuted} />
+          <Text style={styles.metaText}>{community.meetupNote}</Text>
+        </View>
+        <View style={styles.metaRow}>
+          <Ionicons name="people-outline" size={13} color={colors.textMuted} />
+          <Text style={styles.metaText}>{memberCount} members</Text>
+        </View>
+        <View style={styles.viewDetailRow}>
+          <Text style={styles.viewDetailText}>View members & ladder</Text>
+          <Ionicons name="chevron-forward-outline" size={13} color={colors.accent} />
+        </View>
+      </Pressable>
 
-      <Pressable
-        style={({ pressed }) => [
-          styles.button,
-          isJoined && styles.buttonJoined,
-          pressed && styles.buttonPressed,
-        ]}
+      <PressScale
+        style={[styles.button, isJoined && styles.buttonJoined]}
         onPress={onToggle}
       >
         <Ionicons
@@ -55,12 +69,12 @@ function CommunityCard({ community, isJoined, onToggle }: { community: Community
         <Text style={[styles.buttonText, isJoined && styles.buttonTextJoined]}>
           {isJoined ? 'Joined' : 'Join community'}
         </Text>
-      </Pressable>
+      </PressScale>
     </View>
   );
 }
 
-export default function CommunitiesScreen({ joined, onToggleJoin }: Props) {
+export default function CommunitiesScreen({ joined, onToggleJoin, onOpenDetail }: Props) {
   return (
     <View style={styles.container}>
       <View style={styles.sectionHeader}>
@@ -72,7 +86,12 @@ export default function CommunitiesScreen({ joined, onToggleJoin }: Props) {
         data={communities}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <CommunityCard community={item} isJoined={!!joined[item.id]} onToggle={() => onToggleJoin(item.id)} />
+          <CommunityCard
+            community={item}
+            isJoined={!!joined[item.id]}
+            onToggle={() => onToggleJoin(item.id)}
+            onOpenDetail={() => onOpenDetail(item.id)}
+          />
         )}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
@@ -156,6 +175,17 @@ const styles = StyleSheet.create({
     fontFamily: fonts.medium,
     fontSize: 12.5,
   },
+  viewDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: spacing.sm,
+  },
+  viewDetailText: {
+    color: colors.accent,
+    fontFamily: fonts.bold,
+    fontSize: 12,
+  },
   button: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -164,9 +194,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
     paddingVertical: 11,
     marginTop: spacing.md,
-  },
-  buttonPressed: {
-    opacity: 0.85,
   },
   buttonJoined: {
     backgroundColor: colors.surfaceAlt,

@@ -35,4 +35,19 @@ export interface Community {
   meetupNote: string;
   memberCount: number;
   vibe: 'Casual' | 'Competitive' | 'Mixed';
+  memberIds: string[];
+}
+
+export type MatchMode = 'casual' | 'competitive';
+export type RequestStatus = 'pending' | 'accepted' | 'declined';
+
+export interface IncomingRequest {
+  id: string;
+  playerId: string;
+  mode: MatchMode;
+  day: Day;
+  start: string;
+  end: string;
+  courtId: string;
+  status: RequestStatus;
 }

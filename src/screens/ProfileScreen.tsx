@@ -1,12 +1,15 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { currentUser, courts } from '../data/mockData';
+import { courts } from '../data/mockData';
+import { Player, TimeSlot } from '../data/types';
 import { skillLabelFor } from '../logic/skill';
 import { slotKey } from '../logic/slotKey';
 import { colors, fonts, radius, spacing } from '../theme';
 
 interface Props {
+  me: Player;
+  baseAvailability: TimeSlot[];
   skillLevel: number;
   onSkillChange: (level: number) => void;
   activeSlots: Record<string, boolean>;
@@ -16,8 +19,8 @@ interface Props {
 const MIN_SKILL = 1;
 const MAX_SKILL = 5;
 
-export default function ProfileScreen({ skillLevel, onSkillChange, activeSlots, onToggleSlot }: Props) {
-  const homeCourt = courts.find((c) => c.id === currentUser.homeCourtId);
+export default function ProfileScreen({ me, baseAvailability, skillLevel, onSkillChange, activeSlots, onToggleSlot }: Props) {
+  const homeCourt = courts.find((c) => c.id === me.homeCourtId);
   const skillFraction = (skillLevel - MIN_SKILL) / (MAX_SKILL - MIN_SKILL);
 
   return (
@@ -27,17 +30,17 @@ export default function ProfileScreen({ skillLevel, onSkillChange, activeSlots, 
       <View style={styles.card}>
         <View style={styles.headerRow}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{currentUser.initials}</Text>
+            <Text style={styles.avatarText}>{me.initials}</Text>
           </View>
           <View>
-            <Text style={styles.name}>{currentUser.name}</Text>
+            <Text style={styles.name}>{me.name}</Text>
             <View style={styles.homeCourtRow}>
               <Ionicons name="pin-outline" size={13} color={colors.textMuted} />
               <Text style={styles.muted}>{homeCourt?.name}</Text>
             </View>
           </View>
         </View>
-        <Text style={styles.bio}>{currentUser.bio}</Text>
+        <Text style={styles.bio}>{me.bio}</Text>
       </View>
 
       <View style={styles.card}>
@@ -73,7 +76,7 @@ export default function ProfileScreen({ skillLevel, onSkillChange, activeSlots, 
         <Text style={styles.sectionTitle}>Your availability</Text>
         <Text style={styles.mutedSmall}>Tap a slot to mark it unavailable this week</Text>
         <View style={styles.slotWrap}>
-          {currentUser.availability.map((slot) => {
+          {baseAvailability.map((slot) => {
             const key = slotKey(slot);
             const active = activeSlots[key];
             return (

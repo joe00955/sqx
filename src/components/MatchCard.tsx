@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { MatchResult } from '../logic/matching';
+import PressScale from './PressScale';
 import { colors, fonts, radius, shadow, spacing } from '../theme';
 
 interface Props {
@@ -105,12 +106,8 @@ export default function MatchCard({ match }: Props) {
         </View>
       )}
 
-      <Pressable
-        style={({ pressed }) => [
-          styles.button,
-          requested && styles.buttonRequested,
-          pressed && !requested && styles.buttonPressed,
-        ]}
+      <PressScale
+        style={[styles.button, requested && styles.buttonRequested]}
         onPress={() => setRequested(true)}
         disabled={requested}
       >
@@ -120,7 +117,7 @@ export default function MatchCard({ match }: Props) {
             ? `${mode === 'casual' ? 'Casual' : 'Competitive'} request sent`
             : 'Send match request'}
         </Text>
-      </Pressable>
+      </PressScale>
     </View>
   );
 }
@@ -315,9 +312,6 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  buttonPressed: {
-    opacity: 0.85,
   },
   buttonRequested: {
     backgroundColor: colors.surfaceAlt,
