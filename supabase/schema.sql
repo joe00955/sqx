@@ -101,6 +101,19 @@ create policy "users can insert their own profile" on profiles
 create policy "users can update their own profile" on profiles
   for update using (auth.uid() = id);
 
+-- security definer avoids RLS recursion when a profiles policy checks profiles.is_admin
+create or replace function public.is_admin(uid uuid)
+returns boolean
+language sql
+security definer
+stable
+as $$
+  select coalesce((select is_admin from profiles where id = uid), false);
+$$;
+
+create policy "admins can update any profile" on profiles
+  for update using (public.is_admin(auth.uid()));
+
 -- Availability: readable by anyone signed in (needed for matching), writable only by the owner
 create policy "availability is viewable by authenticated users" on availability_slots
   for select using (auth.role() = 'authenticated');

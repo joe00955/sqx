@@ -9,6 +9,7 @@ import { colors, fonts, radius, shadow, spacing } from '../theme';
 interface Props {
   pending: PendingVerification[];
   loading: boolean;
+  error?: string | null;
   onApprove: (userId: string) => void;
   onReject: (userId: string) => void;
 }
@@ -52,13 +53,20 @@ function ReviewCard({
   );
 }
 
-export default function AdminVerificationScreen({ pending, loading, onApprove, onReject }: Props) {
+export default function AdminVerificationScreen({ pending, loading, error, onApprove, onReject }: Props) {
   return (
     <View style={styles.container}>
       <View style={styles.sectionHeader}>
         <Text style={styles.title}>ADMIN</Text>
         <Text style={styles.subtitle}>Verification requests waiting for review</Text>
       </View>
+
+      {!!error && (
+        <View style={styles.errorBox}>
+          <Ionicons name="warning-outline" size={15} color={colors.danger} />
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      )}
 
       <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
         {pending.length === 0 ? (
@@ -97,6 +105,23 @@ const styles = StyleSheet.create({
     fontFamily: fonts.medium,
     fontSize: 13,
     marginTop: 3,
+  },
+  errorBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: colors.accentMuted,
+    borderWidth: 1,
+    borderColor: colors.danger,
+    borderRadius: radius.sm,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  errorText: {
+    color: colors.text,
+    fontFamily: fonts.medium,
+    fontSize: 12.5,
+    flex: 1,
   },
   list: {
     paddingBottom: 24,

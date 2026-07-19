@@ -392,6 +392,7 @@ function AppShell() {
       <AdminVerificationScreen
         pending={adminVerifications.pending}
         loading={adminVerifications.loading}
+        error={adminVerifications.error}
         onApprove={adminVerifications.approve}
         onReject={adminVerifications.reject}
       />

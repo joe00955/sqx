@@ -11,6 +11,7 @@ export interface PendingVerification {
 interface Result {
   pending: PendingVerification[];
   loading: boolean;
+  error: string | null;
   refetch: () => void;
   approve: (userId: string) => Promise<void>;
   reject: (userId: string) => Promise<void>;
@@ -21,10 +22,12 @@ const SIGNED_URL_TTL_SECONDS = 60 * 30;
 export function useAdminVerifications(isAdmin: boolean): Result {
   const [pending, setPending] = useState<PendingVerification[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const refetch = useCallback(() => {
     if (!isAdmin) return;
     setLoading(true);
+    setError(null);
     (async () => {
       const { data } = await supabase
         .from('profiles')
@@ -53,21 +56,29 @@ export function useAdminVerifications(isAdmin: boolean): Result {
     refetch();
   }, [refetch]);
 
-  const approve = useCallback(
-    async (userId: string) => {
-      await supabase.from('profiles').update({ verification_status: 'verified' }).eq('id', userId);
-      setPending((prev) => prev.filter((p) => p.id !== userId));
-    },
-    []
-  );
+  const setStatus = useCallback(async (userId: string, status: 'verified' | 'rejected') => {
+    setError(null);
+    const { data, error: updateError } = await supabase
+      .from('profiles')
+      .update({ verification_status: status })
+      .eq('id', userId)
+      .select('id');
 
-  const reject = useCallback(
-    async (userId: string) => {
-      await supabase.from('profiles').update({ verification_status: 'rejected' }).eq('id', userId);
-      setPending((prev) => prev.filter((p) => p.id !== userId));
-    },
-    []
-  );
+    if (updateError) {
+      setError(updateError.message);
+      return;
+    }
+    if (!data || data.length === 0) {
+      setError(
+        "Update didn't apply — your account may be missing the admin RLS policy on profiles. See the migration SQL for 'admins can update any profile'."
+      );
+      return;
+    }
+    setPending((prev) => prev.filter((p) => p.id !== userId));
+  }, []);
 
-  return { pending, loading, refetch, approve, reject };
+  const approve = useCallback((userId: string) => setStatus(userId, 'verified'), [setStatus]);
+  const reject = useCallback((userId: string) => setStatus(userId, 'rejected'), [setStatus]);
+
+  return { pending, loading, error, refetch, approve, reject };
 }
