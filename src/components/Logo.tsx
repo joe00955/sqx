@@ -1,6 +1,8 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, fonts } from '../theme';
+
+const LOGO_ASPECT_RATIO = 1381 / 365;
 
 interface Props {
   size?: 'sm' | 'lg';
@@ -9,16 +11,21 @@ interface Props {
 }
 
 export default function Logo({ size = 'sm', suffix = 'RALLY', onPress }: Props) {
-  const badgeSize = size === 'lg' ? 44 : 30;
+  const height = size === 'lg' ? 42 : 24;
+  const width = Math.round(height * LOGO_ASPECT_RATIO);
   const content = (
     <View style={styles.row}>
-      <View style={[styles.badge, { width: badgeSize, height: badgeSize }]}>
-        <Text style={[styles.badgeText, size === 'lg' && styles.badgeTextLg]}>X</Text>
-      </View>
-      <Text style={[styles.wordmark, size === 'lg' && styles.wordmarkLg]}>
-        SQUASH<Text style={styles.wordmarkAccent}>X</Text>
-        {suffix ? ` ${suffix}` : ''}
-      </Text>
+      <Image
+        source={require('../../assets/squashx-logo-light.png')}
+        style={{ width, height }}
+        resizeMode="contain"
+      />
+      {!!suffix && (
+        <>
+          <View style={[styles.divider, size === 'lg' && styles.dividerLg]} />
+          <Text style={[styles.suffix, size === 'lg' && styles.suffixLg]}>{suffix}</Text>
+        </>
+      )}
     </View>
   );
 
@@ -33,33 +40,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  badge: {
-    backgroundColor: colors.accent,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10,
-    transform: [{ rotate: '-8deg' }],
+  divider: {
+    width: 1,
+    height: 16,
+    backgroundColor: colors.border,
+    marginHorizontal: 9,
   },
-  badgeText: {
-    color: colors.accentText,
-    fontFamily: fonts.display,
-    fontSize: 16,
-    transform: [{ rotate: '8deg' }],
+  dividerLg: {
+    height: 22,
   },
-  badgeTextLg: {
-    fontSize: 24,
+  suffix: {
+    color: colors.textMuted,
+    fontFamily: fonts.bold,
+    fontSize: 11,
+    letterSpacing: 1.2,
   },
-  wordmark: {
-    color: colors.text,
-    fontFamily: fonts.display,
-    fontSize: 16,
-    letterSpacing: 0.6,
-  },
-  wordmarkLg: {
-    fontSize: 22,
-  },
-  wordmarkAccent: {
-    color: colors.accent,
+  suffixLg: {
+    fontSize: 14,
   },
 });
