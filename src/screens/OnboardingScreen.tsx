@@ -1,13 +1,14 @@
 import React, { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { availabilityPresets, courts } from '../data/mockData';
 import { TimeSlot } from '../data/types';
-import { skillLabelFor } from '../logic/skill';
+import { computeSkillLevel, skillQuizQuestions } from '../logic/skillQuiz';
 import { slotKey } from '../logic/slotKey';
 import Logo from '../components/Logo';
 import FadeIn from '../components/FadeIn';
 import PressScale from '../components/PressScale';
+import SkillQuizForm from '../components/SkillQuizForm';
 import { colors, fonts, radius, spacing } from '../theme';
 
 interface OnboardingResult {
@@ -23,29 +24,32 @@ interface Props {
 }
 
 const STEP_COUNT = 4;
-const MIN_SKILL = 1;
-const MAX_SKILL = 5;
 
 export default function OnboardingScreen({ onComplete, onSkip }: Props) {
   const [step, setStep] = useState(0);
   const [name, setName] = useState('');
-  const [skillLevel, setSkillLevel] = useState(3.0);
+  const [quizAnswers, setQuizAnswers] = useState<(number | null)[]>(() => skillQuizQuestions.map(() => null));
   const [homeCourtId, setHomeCourtId] = useState<string | null>(null);
   const [selectedSlots, setSelectedSlots] = useState<Record<string, boolean>>({});
 
-  const skillFraction = (skillLevel - MIN_SKILL) / (MAX_SKILL - MIN_SKILL);
   const selectedCount = Object.values(selectedSlots).filter(Boolean).length;
+  const quizComplete = quizAnswers.every((a) => a !== null);
 
   const canProceed = useMemo(() => {
     if (step === 0) return name.trim().length > 0;
+    if (step === 1) return quizComplete;
     if (step === 2) return !!homeCourtId;
     if (step === 3) return selectedCount > 0;
     return true;
-  }, [step, name, homeCourtId, selectedCount]);
+  }, [step, name, quizComplete, homeCourtId, selectedCount]);
 
   const toggleSlot = (slot: TimeSlot) => {
     const key = slotKey(slot);
     setSelectedSlots((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const handleAnswerQuestion = (questionIndex: number, points: number) => {
+    setQuizAnswers((prev) => prev.map((value, index) => (index === questionIndex ? points : value)));
   };
 
   const handleNext = () => {
@@ -54,6 +58,7 @@ export default function OnboardingScreen({ onComplete, onSkip }: Props) {
       return;
     }
     const availability = availabilityPresets.filter((slot) => selectedSlots[slotKey(slot)]);
+    const skillLevel = computeSkillLevel(quizAnswers as number[]);
     onComplete({ name: name.trim(), skillLevel, homeCourtId: homeCourtId!, availability });
   };
 
@@ -72,57 +77,34 @@ export default function OnboardingScreen({ onComplete, onSkip }: Props) {
         ))}
       </View>
 
-      <FadeIn key={step} style={styles.stepBody}>
-        {step === 0 && (
-          <View>
-            <Text style={styles.headline}>WELCOME TO THE CLUB</Text>
-            <Text style={styles.subtitle}>Let's set up your player profile — it only takes a minute.</Text>
-            <TextInput
-              value={name}
-              onChangeText={setName}
-              placeholder="Your name"
-              placeholderTextColor={colors.textFaint}
-              style={styles.input}
-              autoFocus
-            />
-          </View>
-        )}
-
-        {step === 1 && (
-          <View>
-            <Text style={styles.headline}>WHAT'S YOUR LEVEL?</Text>
-            <Text style={styles.subtitle}>Be honest — it just helps us find fair matches.</Text>
-            <View style={styles.card}>
-              <View style={styles.stepperRow}>
-                <Pressable
-                  hitSlop={8}
-                  onPress={() => setSkillLevel(Math.max(MIN_SKILL, Math.round((skillLevel - 0.5) * 10) / 10))}
-                >
-                  <Ionicons name="remove-circle-outline" size={34} color={colors.accent} />
-                </Pressable>
-                <View style={styles.stepperValue}>
-                  <Text style={styles.stepperValueText}>{skillLevel.toFixed(1)}</Text>
-                  <Text style={styles.muted}>{skillLabelFor(skillLevel)}</Text>
-                </View>
-                <Pressable
-                  hitSlop={8}
-                  onPress={() => setSkillLevel(Math.min(MAX_SKILL, Math.round((skillLevel + 0.5) * 10) / 10))}
-                >
-                  <Ionicons name="add-circle-outline" size={34} color={colors.accent} />
-                </Pressable>
-              </View>
-              <View style={styles.skillTrack}>
-                <View style={[styles.skillFill, { width: `${skillFraction * 100}%` }]} />
-              </View>
-              <View style={styles.skillEndsRow}>
-                <Text style={styles.skillEndLabel}>Beginner</Text>
-                <Text style={styles.skillEndLabel}>Pro</Text>
-              </View>
+      <ScrollView style={styles.scrollArea} showsVerticalScrollIndicator={false}>
+        <FadeIn key={step} style={styles.stepBody}>
+          {step === 0 && (
+            <View>
+              <Text style={styles.headline}>WELCOME TO THE CLUB</Text>
+              <Text style={styles.subtitle}>Let's set up your player profile — it only takes a minute.</Text>
+              <TextInput
+                value={name}
+                onChangeText={setName}
+                placeholder="Your name"
+                placeholderTextColor={colors.textFaint}
+                style={styles.input}
+                autoFocus
+              />
             </View>
-          </View>
-        )}
+          )}
 
-        {step === 2 && (
+          {step === 1 && (
+            <View>
+              <Text style={styles.headline}>WHAT'S YOUR LEVEL?</Text>
+              <Text style={styles.subtitle}>
+                Answer honestly — we work out a fair starting level from this instead of asking you to guess a number.
+              </Text>
+              <SkillQuizForm answers={quizAnswers} onAnswer={handleAnswerQuestion} />
+            </View>
+          )}
+
+          {step === 2 && (
           <View>
             <Text style={styles.headline}>PICK YOUR HOME COURT</Text>
             <Text style={styles.subtitle}>Where do you usually play around Duisburg?</Text>
@@ -178,7 +160,8 @@ export default function OnboardingScreen({ onComplete, onSkip }: Props) {
             </View>
           </View>
         )}
-      </FadeIn>
+        </FadeIn>
+      </ScrollView>
 
       <View style={styles.footerRow}>
         {step > 0 ? (
@@ -241,6 +224,9 @@ const styles = StyleSheet.create({
   progressDotActive: {
     backgroundColor: colors.accent,
   },
+  scrollArea: {
+    flex: 1,
+  },
   stepBody: {
     flexGrow: 0,
   },
@@ -269,56 +255,11 @@ const styles = StyleSheet.create({
     fontFamily: fonts.semibold,
     fontSize: 15,
   },
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  stepperRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 24,
-    marginBottom: spacing.md,
-  },
-  stepperValue: {
-    alignItems: 'center',
-    minWidth: 90,
-  },
-  stepperValueText: {
-    color: colors.text,
-    fontFamily: fonts.display,
-    fontSize: 28,
-  },
   muted: {
     color: colors.textMuted,
     fontFamily: fonts.medium,
     fontSize: 13,
     marginTop: 2,
-  },
-  skillTrack: {
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.surfaceAlt,
-    overflow: 'hidden',
-  },
-  skillFill: {
-    height: '100%',
-    borderRadius: 3,
-    backgroundColor: colors.accent,
-  },
-  skillEndsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 6,
-  },
-  skillEndLabel: {
-    color: colors.textFaint,
-    fontFamily: fonts.bold,
-    fontSize: 11,
-    textTransform: 'uppercase',
   },
   courtCard: {
     flexDirection: 'row',

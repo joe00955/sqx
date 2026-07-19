@@ -1,10 +1,13 @@
-import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { courts } from '../data/mockData';
 import { Player, TimeSlot } from '../data/types';
 import { skillLabelFor } from '../logic/skill';
+import { computeSkillLevel, skillQuizQuestions } from '../logic/skillQuiz';
 import { slotKey } from '../logic/slotKey';
+import PressScale from '../components/PressScale';
+import SkillQuizForm from '../components/SkillQuizForm';
 import { colors, fonts, radius, spacing } from '../theme';
 
 interface Props {
@@ -23,8 +26,26 @@ export default function ProfileScreen({ me, baseAvailability, skillLevel, onSkil
   const homeCourt = courts.find((c) => c.id === me.homeCourtId);
   const skillFraction = (skillLevel - MIN_SKILL) / (MAX_SKILL - MIN_SKILL);
 
+  const [retaking, setRetaking] = useState(false);
+  const [quizAnswers, setQuizAnswers] = useState<(number | null)[]>(() => skillQuizQuestions.map(() => null));
+  const quizComplete = quizAnswers.every((a) => a !== null);
+
+  const startRetake = () => {
+    setQuizAnswers(skillQuizQuestions.map(() => null));
+    setRetaking(true);
+  };
+
+  const handleAnswerQuestion = (questionIndex: number, points: number) => {
+    setQuizAnswers((prev) => prev.map((value, index) => (index === questionIndex ? points : value)));
+  };
+
+  const saveRetake = () => {
+    onSkillChange(computeSkillLevel(quizAnswers as number[]));
+    setRetaking(false);
+  };
+
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
       <Text style={styles.title}>YOUR PROFILE</Text>
 
       <View style={styles.card}>
@@ -45,31 +66,44 @@ export default function ProfileScreen({ me, baseAvailability, skillLevel, onSkil
 
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Skill level</Text>
-        <View style={styles.stepperRow}>
-          <Pressable
-            hitSlop={8}
-            onPress={() => onSkillChange(Math.max(MIN_SKILL, Math.round((skillLevel - 0.5) * 10) / 10))}
-          >
-            <Ionicons name="remove-circle-outline" size={34} color={colors.accent} />
-          </Pressable>
-          <View style={styles.stepperValue}>
-            <Text style={styles.stepperValueText}>{skillLevel.toFixed(1)}</Text>
-            <Text style={styles.muted}>{skillLabelFor(skillLevel)}</Text>
+        {retaking ? (
+          <View>
+            <Text style={styles.mutedSmall}>
+              Answer honestly — we work out your level from this instead of you guessing a number.
+            </Text>
+            <SkillQuizForm answers={quizAnswers} onAnswer={handleAnswerQuestion} />
+            <View style={styles.retakeActionsRow}>
+              <Pressable style={styles.cancelButton} onPress={() => setRetaking(false)} hitSlop={8}>
+                <Text style={styles.cancelText}>Cancel</Text>
+              </Pressable>
+              <PressScale
+                style={[styles.saveButton, !quizComplete && styles.saveButtonDisabled]}
+                onPress={saveRetake}
+                disabled={!quizComplete}
+              >
+                <Text style={styles.saveText}>Save level</Text>
+              </PressScale>
+            </View>
           </View>
-          <Pressable
-            hitSlop={8}
-            onPress={() => onSkillChange(Math.min(MAX_SKILL, Math.round((skillLevel + 0.5) * 10) / 10))}
-          >
-            <Ionicons name="add-circle-outline" size={34} color={colors.accent} />
-          </Pressable>
-        </View>
-        <View style={styles.skillTrack}>
-          <View style={[styles.skillFill, { width: `${skillFraction * 100}%` }]} />
-        </View>
-        <View style={styles.skillEndsRow}>
-          <Text style={styles.skillEndLabel}>Beginner</Text>
-          <Text style={styles.skillEndLabel}>Pro</Text>
-        </View>
+        ) : (
+          <View>
+            <View style={styles.stepperValue}>
+              <Text style={styles.stepperValueText}>{skillLevel.toFixed(1)}</Text>
+              <Text style={styles.muted}>{skillLabelFor(skillLevel)}</Text>
+            </View>
+            <View style={styles.skillTrack}>
+              <View style={[styles.skillFill, { width: `${skillFraction * 100}%` }]} />
+            </View>
+            <View style={styles.skillEndsRow}>
+              <Text style={styles.skillEndLabel}>Beginner</Text>
+              <Text style={styles.skillEndLabel}>Pro</Text>
+            </View>
+            <Pressable style={styles.retakeButton} onPress={startRetake} hitSlop={8}>
+              <Ionicons name="refresh-outline" size={14} color={colors.accent} />
+              <Text style={styles.retakeText}>Retake skill assessment</Text>
+            </Pressable>
+          </View>
+        )}
       </View>
 
       <View style={styles.card}>
@@ -99,15 +133,18 @@ export default function ProfileScreen({ me, baseAvailability, skillLevel, onSkil
           })}
         </View>
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  scrollContent: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
+    paddingBottom: spacing.xl,
   },
   title: {
     color: colors.text,
@@ -179,16 +216,9 @@ const styles = StyleSheet.create({
     fontSize: 15,
     marginBottom: spacing.md,
   },
-  stepperRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 24,
-    marginBottom: spacing.md,
-  },
   stepperValue: {
     alignItems: 'center',
-    minWidth: 90,
+    marginBottom: spacing.md,
   },
   stepperValueText: {
     color: colors.text,
@@ -216,6 +246,49 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bold,
     fontSize: 11,
     textTransform: 'uppercase',
+  },
+  retakeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: spacing.lg,
+    paddingVertical: 8,
+  },
+  retakeText: {
+    color: colors.accent,
+    fontFamily: fonts.bold,
+    fontSize: 12.5,
+  },
+  retakeActionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginTop: spacing.sm,
+  },
+  cancelButton: {
+    paddingVertical: 11,
+    paddingHorizontal: spacing.md,
+  },
+  cancelText: {
+    color: colors.textMuted,
+    fontFamily: fonts.semibold,
+    fontSize: 13.5,
+  },
+  saveButton: {
+    backgroundColor: colors.accent,
+    borderRadius: radius.sm,
+    paddingVertical: 11,
+    paddingHorizontal: spacing.lg,
+  },
+  saveButtonDisabled: {
+    opacity: 0.4,
+  },
+  saveText: {
+    color: colors.accentText,
+    fontFamily: fonts.bold,
+    fontSize: 13.5,
   },
   slotWrap: {
     flexDirection: 'row',
