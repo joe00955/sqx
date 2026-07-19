@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Logo from '../components/Logo';
@@ -9,6 +9,8 @@ import { colors, fonts, gradients, radius, shadow, spacing } from '../theme';
 
 interface Props {
   onEnterRally: () => void;
+  onOpenPrivacy: () => void;
+  onOpenTerms: () => void;
 }
 
 const comingSoon: { icon: keyof typeof Ionicons.glyphMap; name: string; description: string }[] = [
@@ -29,7 +31,22 @@ const comingSoon: { icon: keyof typeof Ionicons.glyphMap; name: string; descript
   },
 ];
 
-export default function SquashXHomeScreen({ onEnterRally }: Props) {
+const steps: { title: string; description: string }[] = [
+  {
+    title: 'Set up your profile',
+    description: 'Tell us your skill level, home court, and when you’re usually free to play.',
+  },
+  {
+    title: 'Get matched',
+    description: 'We surface nearby players who fit your skill level and schedule.',
+  },
+  {
+    title: 'Play & climb',
+    description: 'Send a match request, join a community, and track your progress on the ladder.',
+  },
+];
+
+export default function SquashXHomeScreen({ onEnterRally, onOpenPrivacy, onOpenTerms }: Props) {
   return (
     <LinearGradient colors={gradients.glow} style={styles.root}>
       <AccentMotif style={styles.motif} />
@@ -56,6 +73,24 @@ export default function SquashXHomeScreen({ onEnterRally }: Props) {
           </PressScale>
         </View>
 
+        <Text style={styles.sectionTitle}>HOW IT WORKS</Text>
+        <View style={styles.stepsWrap}>
+          {steps.map((step, index) => (
+            <View key={step.title} style={styles.stepRow}>
+              <View style={styles.stepBadgeCol}>
+                <View style={styles.stepBadge}>
+                  <Text style={styles.stepBadgeText}>{index + 1}</Text>
+                </View>
+                {index < steps.length - 1 && <View style={styles.stepConnector} />}
+              </View>
+              <View style={styles.stepTextWrap}>
+                <Text style={styles.stepTitle}>{step.title}</Text>
+                <Text style={styles.stepDescription}>{step.description}</Text>
+              </View>
+            </View>
+          ))}
+        </View>
+
         <Text style={styles.sectionTitle}>MORE FROM SQUASHX</Text>
         {comingSoon.map((product) => (
           <View key={product.name} style={styles.productCard}>
@@ -71,6 +106,19 @@ export default function SquashXHomeScreen({ onEnterRally }: Props) {
             </View>
           </View>
         ))}
+
+        <View style={styles.footer}>
+          <Text style={styles.footerCopy}>© 2026 SquashX. All rights reserved.</Text>
+          <View style={styles.footerLinks}>
+            <Pressable onPress={onOpenPrivacy} hitSlop={8}>
+              <Text style={styles.footerLink}>Privacy</Text>
+            </Pressable>
+            <Text style={styles.footerDot}>·</Text>
+            <Pressable onPress={onOpenTerms} hitSlop={8}>
+              <Text style={styles.footerLink}>Terms</Text>
+            </Pressable>
+          </View>
+        </View>
       </ScrollView>
     </LinearGradient>
   );
@@ -153,6 +201,81 @@ const styles = StyleSheet.create({
     fontSize: 11,
     letterSpacing: 0.5,
     marginBottom: spacing.sm,
+  },
+  stepsWrap: {
+    marginBottom: spacing.xl,
+  },
+  stepRow: {
+    flexDirection: 'row',
+  },
+  stepBadgeCol: {
+    alignItems: 'center',
+    marginRight: spacing.md,
+  },
+  stepBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepBadgeText: {
+    color: colors.accentText,
+    fontFamily: fonts.extrabold,
+    fontSize: 13,
+  },
+  stepConnector: {
+    width: 2,
+    flex: 1,
+    minHeight: 20,
+    backgroundColor: colors.border,
+    marginVertical: 4,
+  },
+  stepTextWrap: {
+    flex: 1,
+    paddingBottom: spacing.lg,
+  },
+  stepTitle: {
+    color: colors.text,
+    fontFamily: fonts.bold,
+    fontSize: 14.5,
+    marginTop: 3,
+  },
+  stepDescription: {
+    color: colors.textMuted,
+    fontFamily: fonts.regular,
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 3,
+  },
+  footer: {
+    marginTop: spacing.xl,
+    paddingTop: spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    alignItems: 'center',
+  },
+  footerCopy: {
+    color: colors.textFaint,
+    fontFamily: fonts.medium,
+    fontSize: 11.5,
+    marginBottom: spacing.sm,
+  },
+  footerLinks: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  footerLink: {
+    color: colors.textMuted,
+    fontFamily: fonts.semibold,
+    fontSize: 12,
+    textDecorationLine: 'underline',
+  },
+  footerDot: {
+    color: colors.textFaint,
+    fontSize: 12,
   },
   productCard: {
     flexDirection: 'row',

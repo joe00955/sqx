@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, SafeAreaView, StatusBar, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Image, Platform, Pressable, SafeAreaView, StatusBar, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFonts as useAnton, Anton_400Regular } from '@expo-google-fonts/anton';
@@ -19,6 +19,7 @@ import LaddersScreen from './src/screens/LaddersScreen';
 import RequestsScreen from './src/screens/RequestsScreen';
 import OnboardingScreen from './src/screens/OnboardingScreen';
 import SquashXHomeScreen from './src/screens/SquashXHomeScreen';
+import LegalScreen from './src/screens/LegalScreen';
 import Logo from './src/components/Logo';
 import AccentMotif from './src/components/AccentMotif';
 import FadeIn from './src/components/FadeIn';
@@ -46,6 +47,36 @@ function initialsFor(name: string): string {
   return parts.slice(0, 2).map((p) => p[0]?.toUpperCase() ?? '').join('') || '?';
 }
 
+const isWeb = Platform.OS === 'web';
+
+interface Route {
+  view: 'hub' | 'rally';
+  tab: Tab;
+}
+
+function pathForRoute(route: Route): string {
+  return route.view === 'hub' ? '/' : `/${route.tab}`;
+}
+
+function routeForPath(pathname: string): Route {
+  switch (pathname.replace(/\/+$/, '') || '/') {
+    case '/requests':
+      return { view: 'rally', tab: 'requests' };
+    case '/communities':
+      return { view: 'rally', tab: 'communities' };
+    case '/ladders':
+      return { view: 'rally', tab: 'ladders' };
+    case '/profile':
+      return { view: 'rally', tab: 'profile' };
+    case '/browse':
+      return { view: 'rally', tab: 'browse' };
+    default:
+      return { view: 'hub', tab: 'browse' };
+  }
+}
+
+const initialRoute: Route = isWeb ? routeForPath(window.location.pathname) : { view: 'hub', tab: 'browse' };
+
 export default function App() {
   const [antonLoaded] = useAnton({ Anton_400Regular });
   const [manropeLoaded] = useManrope({
@@ -60,10 +91,37 @@ export default function App() {
   const { width } = useWindowDimensions();
   const isWide = width >= WIDE_BREAKPOINT;
 
-  const [view, setView] = useState<'hub' | 'rally'>('hub');
+  const [view, setView] = useState<'hub' | 'rally'>(initialRoute.view);
   const [onboarded, setOnboarded] = useState(false);
-  const [tab, setTab] = useState<Tab>('browse');
+  const [tab, setTab] = useState<Tab>(initialRoute.tab);
   const [selectedCommunityId, setSelectedCommunityId] = useState<string | null>(null);
+  const [legalPage, setLegalPage] = useState<'privacy' | 'terms' | null>(null);
+  const skipNextUrlSync = useRef(false);
+
+  useEffect(() => {
+    if (!isWeb) return;
+    const path = pathForRoute({ view, tab });
+    if (skipNextUrlSync.current) {
+      skipNextUrlSync.current = false;
+      return;
+    }
+    if (window.location.pathname !== path) {
+      window.history.pushState({}, '', path);
+    }
+  }, [view, tab]);
+
+  useEffect(() => {
+    if (!isWeb) return;
+    const handlePopState = () => {
+      const route = routeForPath(window.location.pathname);
+      skipNextUrlSync.current = true;
+      setView(route.view);
+      setTab(route.tab);
+      setSelectedCommunityId(null);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   const [name, setName] = useState(currentUser.name);
   const [bio, setBio] = useState(currentUser.bio);
@@ -129,7 +187,12 @@ export default function App() {
   if (!fontsReady) {
     return (
       <View style={styles.loadingScreen}>
-        <ActivityIndicator color={colors.accent} />
+        <Image
+          source={require('./assets/squashx-logo-light.png')}
+          style={styles.loadingLogo}
+          resizeMode="contain"
+        />
+        <ActivityIndicator color={colors.accent} style={styles.loadingSpinner} />
       </View>
     );
   }
@@ -138,7 +201,25 @@ export default function App() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <StatusBar barStyle="light-content" backgroundColor={colors.background} />
-        <SquashXHomeScreen onEnterRally={() => setView('rally')} />
+        {legalPage === 'privacy' ? (
+          <LegalScreen
+            title="Privacy Policy"
+            body="SquashX Rally is currently a prototype for demonstration purposes. No account data is sent to a server — everything you enter (profile, availability, match requests) lives only in this browser session and disappears on refresh. A full privacy policy will be published when SquashX launches for real."
+            onBack={() => setLegalPage(null)}
+          />
+        ) : legalPage === 'terms' ? (
+          <LegalScreen
+            title="Terms of Service"
+            body="SquashX Rally is a prototype and not a live commercial service. There are no accounts, payments, or guarantees of any kind at this stage. A full terms of service will be published when SquashX launches for real."
+            onBack={() => setLegalPage(null)}
+          />
+        ) : (
+          <SquashXHomeScreen
+            onEnterRally={() => setView('rally')}
+            onOpenPrivacy={() => setLegalPage('privacy')}
+            onOpenTerms={() => setLegalPage('terms')}
+          />
+        )}
       </SafeAreaView>
     );
   }
@@ -275,6 +356,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  loadingLogo: {
+    width: 220,
+    height: 58,
+    marginBottom: spacing.xl,
+  },
+  loadingSpinner: {
+    marginTop: spacing.sm,
   },
 
   // Narrow (mobile) layout
