@@ -32,6 +32,7 @@ create table if not exists profiles (
   casual_games_played integer not null default 0,
   latitude double precision,
   longitude double precision,
+  contact_email text,
   created_at timestamptz not null default now()
 );
 
@@ -117,3 +118,31 @@ create policy "senders can create a request" on match_requests
   for insert with check (auth.uid() = from_user_id);
 create policy "recipients can respond to a request" on match_requests
   for update using (auth.uid() = to_user_id);
+
+-- ── Safety: blocking + reporting ─────────────────────────────────────
+create table if not exists blocked_users (
+  blocker_id uuid not null references profiles(id) on delete cascade,
+  blocked_id uuid not null references profiles(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (blocker_id, blocked_id)
+);
+
+create table if not exists reports (
+  id uuid primary key default gen_random_uuid(),
+  reporter_id uuid not null references profiles(id) on delete cascade,
+  reported_id uuid not null references profiles(id) on delete cascade,
+  reason text not null,
+  details text not null default '',
+  created_at timestamptz not null default now()
+);
+
+alter table blocked_users enable row level security;
+alter table reports enable row level security;
+
+-- Block list: only the blocker can see or manage their own list
+create policy "users manage their own block list" on blocked_users
+  for all using (auth.uid() = blocker_id) with check (auth.uid() = blocker_id);
+
+-- Reports: write-only from the client; no one can read reports back via the API
+create policy "users can file a report" on reports
+  for insert with check (auth.uid() = reporter_id);

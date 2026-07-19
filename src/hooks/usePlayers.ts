@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { players as mockPlayers } from '../data/mockData';
 import { Day, Player, TimeSlot } from '../data/types';
 import { skillLabelFor } from '../logic/skill';
+import { haversineKm } from '../logic/geo';
+import { Coords } from './useLocation';
 
 interface ProfileRow {
   id: string;
@@ -12,6 +14,9 @@ interface ProfileRow {
   home_court_id: string | null;
   competitive_elo: number;
   casual_games_played: number;
+  latitude: number | null;
+  longitude: number | null;
+  contact_email: string | null;
 }
 
 interface AvailabilityRow {
@@ -21,6 +26,20 @@ interface AvailabilityRow {
   end_time: string;
 }
 
+interface RawPlayer {
+  id: string;
+  name: string;
+  bio: string;
+  skillLevel: number;
+  homeCourtId: string;
+  competitiveElo: number;
+  casualGamesPlayed: number;
+  latitude: number | null;
+  longitude: number | null;
+  contactEmail: string | null;
+  availability: TimeSlot[];
+}
+
 const toHm = (time: string) => time.slice(0, 5);
 
 function initialsFor(name: string): string {
@@ -28,8 +47,8 @@ function initialsFor(name: string): string {
   return parts.slice(0, 2).map((p) => p[0]?.toUpperCase() ?? '').join('') || '?';
 }
 
-export function usePlayers(currentUserId: string | null): { players: Player[]; loading: boolean } {
-  const [players, setPlayers] = useState<Player[]>(isSupabaseConfigured ? [] : mockPlayers);
+export function usePlayers(currentUserId: string | null, myLocation?: Coords | null): { players: Player[]; loading: boolean } {
+  const [rawPlayers, setRawPlayers] = useState<RawPlayer[]>([]);
   const [loading, setLoading] = useState(isSupabaseConfigured);
 
   useEffect(() => {
@@ -39,7 +58,7 @@ export function usePlayers(currentUserId: string | null): { players: Player[]; l
     (async () => {
       let profilesQuery = supabase
         .from('profiles')
-        .select('id, name, bio, skill_level, home_court_id, competitive_elo, casual_games_played');
+        .select('id, name, bio, skill_level, home_court_id, competitive_elo, casual_games_played, latitude, longitude, contact_email');
       if (currentUserId) {
         profilesQuery = profilesQuery.neq('id', currentUserId);
       }
@@ -57,19 +76,19 @@ export function usePlayers(currentUserId: string | null): { players: Player[]; l
         slotsByUser.set(row.user_id, list);
       });
 
-      setPlayers(
+      setRawPlayers(
         ((profileRows as ProfileRow[] | null) ?? []).map((row) => ({
           id: row.id,
           name: row.name,
-          initials: initialsFor(row.name),
-          skillLevel: Number(row.skill_level),
-          skillLabel: skillLabelFor(Number(row.skill_level)),
           bio: row.bio,
+          skillLevel: Number(row.skill_level),
           homeCourtId: row.home_court_id ?? '',
-          distanceKm: 0,
-          availability: slotsByUser.get(row.id) ?? [],
           competitiveElo: row.competitive_elo,
           casualGamesPlayed: row.casual_games_played,
+          latitude: row.latitude,
+          longitude: row.longitude,
+          contactEmail: row.contact_email,
+          availability: slotsByUser.get(row.id) ?? [],
         }))
       );
       setLoading(false);
@@ -79,6 +98,27 @@ export function usePlayers(currentUserId: string | null): { players: Player[]; l
       cancelled = true;
     };
   }, [currentUserId]);
+
+  const players: Player[] = useMemo(() => {
+    if (!isSupabaseConfigured) return mockPlayers;
+    return rawPlayers.map((row) => ({
+      id: row.id,
+      name: row.name,
+      initials: initialsFor(row.name),
+      skillLevel: row.skillLevel,
+      skillLabel: skillLabelFor(row.skillLevel),
+      bio: row.bio,
+      homeCourtId: row.homeCourtId,
+      distanceKm:
+        myLocation && row.latitude != null && row.longitude != null
+          ? haversineKm(myLocation.latitude, myLocation.longitude, row.latitude, row.longitude)
+          : 0,
+      availability: row.availability,
+      competitiveElo: row.competitiveElo,
+      casualGamesPlayed: row.casualGamesPlayed,
+      contactEmail: row.contactEmail ?? undefined,
+    }));
+  }, [rawPlayers, myLocation]);
 
   return { players, loading };
 }

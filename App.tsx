@@ -36,6 +36,8 @@ import { useProfile } from './src/hooks/useProfile';
 import { usePlayers } from './src/hooks/usePlayers';
 import { useCommunities } from './src/hooks/useCommunities';
 import { useMatchRequests } from './src/hooks/useMatchRequests';
+import { useLocation } from './src/hooks/useLocation';
+import { useSafety } from './src/hooks/useSafety';
 
 type Tab = 'browse' | 'requests' | 'communities' | 'ladders' | 'profile';
 
@@ -144,16 +146,28 @@ function AppShell() {
     casualGamesPlayed: currentUser.casualGamesPlayed,
   });
 
-  const { courts: liveCourts } = useCourts();
   const { session, loading: authLoading, signOut } = useAuth();
   const userId = isSupabaseConfigured ? session?.user?.id ?? null : null;
+  const { location: myLocation } = useLocation();
+  const { courts: liveCourts } = useCourts(myLocation);
   const profile = useProfile(userId);
-  const { players: livePlayers } = usePlayers(userId);
+  const { players: allLivePlayers } = usePlayers(userId, myLocation);
+  const { blockedIds, blockUser, reportUser } = useSafety(userId);
+  const livePlayers = useMemo(
+    () => allLivePlayers.filter((p) => !blockedIds.has(p.id)),
+    [allLivePlayers, blockedIds]
+  );
   const { communities: liveCommunities, joined: joinedCommunities, toggleJoin: toggleCommunity } = useCommunities(
     userId,
     livePlayers
   );
-  const { requests, respond: respondToRequest, sendRequest } = useMatchRequests(userId);
+  const { incoming: incomingRequests, outgoing: outgoingRequests, respond: respondToRequest, sendRequest } = useMatchRequests(userId);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured || !userId || !myLocation) return;
+    profile.updateLocation(myLocation.latitude, myLocation.longitude);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, myLocation]);
 
   const toggleSlot = (key: string) => {
     if (isSupabaseConfigured) {
@@ -176,7 +190,7 @@ function AppShell() {
     availability: TimeSlot[];
   }) => {
     if (isSupabaseConfigured) {
-      await profile.createProfile(result);
+      await profile.createProfile({ ...result, contactEmail: session?.user?.email ?? null });
       return;
     }
     setName(result.name);
@@ -228,7 +242,7 @@ function AppShell() {
     };
   }, [userId, profile, name, bio, skillLevel, homeCourtId, baseAvailability, activeSlots, stats]);
 
-  const pendingCount = requests.filter((r) => r.status === 'pending').length;
+  const pendingCount = incomingRequests.filter((r) => r.status === 'pending').length;
 
   if (!fontsReady) {
     return (
@@ -250,13 +264,13 @@ function AppShell() {
         {legalPage === 'privacy' ? (
           <LegalScreen
             title="Privacy Policy"
-            body="SquashX Rally is currently a prototype for demonstration purposes. No account data is sent to a server — everything you enter (profile, availability, match requests) lives only in this browser session and disappears on refresh. A full privacy policy will be published when SquashX launches for real."
+            body="SquashX Rally is an early-access product. Creating an account stores your profile (name, skill level, availability, home court), and — if you allow it — your approximate location, used only to show distance and sort matches. Your email is only shared with another player after you both agree to a match, so you can arrange to play. You can report or block another player at any time; reports are reviewed by the SquashX team and are not visible to other players. This is not yet a full legal privacy policy — one will be published before a commercial launch."
             onBack={() => setLegalPage(null)}
           />
         ) : legalPage === 'terms' ? (
           <LegalScreen
             title="Terms of Service"
-            body="SquashX Rally is a prototype and not a live commercial service. There are no accounts, payments, or guarantees of any kind at this stage. A full terms of service will be published when SquashX launches for real."
+            body="SquashX Rally is an early-access product, not a finished commercial service — expect rough edges and occasional resets. There are no payments or service guarantees at this stage. Be respectful of other players; abusive behavior can get you blocked or removed. A full terms of service will be published before a commercial launch."
             onBack={() => setLegalPage(null)}
           />
         ) : (
@@ -314,9 +328,17 @@ function AppShell() {
         players={livePlayers}
         courts={liveCourts}
         onSendRequest={(player, mode, booking) => sendRequest({ toUserId: player.id, mode, booking })}
+        onBlockPlayer={blockUser}
+        onReportPlayer={reportUser}
       />
     ) : tab === 'requests' ? (
-      <RequestsScreen requests={requests} players={livePlayers} courts={liveCourts} onRespond={respondToRequest} />
+      <RequestsScreen
+        incoming={incomingRequests}
+        outgoing={outgoingRequests}
+        players={livePlayers}
+        courts={liveCourts}
+        onRespond={respondToRequest}
+      />
     ) : tab === 'communities' ? (
       selectedCommunity ? (
         <CommunityDetailScreen

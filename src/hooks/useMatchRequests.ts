@@ -7,6 +7,7 @@ import { SuggestedBooking } from '../logic/matching';
 interface RequestRow {
   id: string;
   from_user_id: string;
+  to_user_id: string;
   mode: MatchMode;
   day: Day;
   start_time: string;
@@ -18,7 +19,8 @@ interface RequestRow {
 const toHm = (time: string) => time.slice(0, 5);
 
 interface Result {
-  requests: IncomingRequest[];
+  incoming: IncomingRequest[];
+  outgoing: IncomingRequest[];
   respond: (id: string, status: RequestStatus) => void;
   sendRequest: (input: { toUserId: string; mode: MatchMode; booking: SuggestedBooking }) => Promise<void>;
   loading: boolean;
@@ -26,18 +28,20 @@ interface Result {
 
 export function useMatchRequests(currentUserId: string | null): Result {
   const [mockState, setMockState] = useState<IncomingRequest[]>(mockRequests);
-  const [rows, setRows] = useState<RequestRow[]>([]);
+  const [incomingRows, setIncomingRows] = useState<RequestRow[]>([]);
+  const [outgoingRows, setOutgoingRows] = useState<RequestRow[]>([]);
   const [loading, setLoading] = useState(isSupabaseConfigured);
 
   const refetch = useCallback(async () => {
     if (!isSupabaseConfigured || !currentUserId) return;
     setLoading(true);
-    const { data } = await supabase
-      .from('match_requests')
-      .select('id, from_user_id, mode, day, start_time, end_time, court_id, status')
-      .eq('to_user_id', currentUserId)
-      .order('created_at', { ascending: false });
-    setRows((data as RequestRow[] | null) ?? []);
+    const columns = 'id, from_user_id, to_user_id, mode, day, start_time, end_time, court_id, status';
+    const [{ data: incoming }, { data: outgoing }] = await Promise.all([
+      supabase.from('match_requests').select(columns).eq('to_user_id', currentUserId).order('created_at', { ascending: false }),
+      supabase.from('match_requests').select(columns).eq('from_user_id', currentUserId).order('created_at', { ascending: false }),
+    ]);
+    setIncomingRows((incoming as RequestRow[] | null) ?? []);
+    setOutgoingRows((outgoing as RequestRow[] | null) ?? []);
     setLoading(false);
   }, [currentUserId]);
 
@@ -45,25 +49,37 @@ export function useMatchRequests(currentUserId: string | null): Result {
     refetch();
   }, [refetch]);
 
-  const requests: IncomingRequest[] = isSupabaseConfigured
-    ? rows.map((row) => ({
-        id: row.id,
-        playerId: row.from_user_id,
-        mode: row.mode,
-        day: row.day,
-        start: toHm(row.start_time),
-        end: toHm(row.end_time),
-        courtId: row.court_id ?? '',
-        status: row.status,
-      }))
-    : mockState;
+  const toIncomingRequest = (row: RequestRow): IncomingRequest => ({
+    id: row.id,
+    playerId: row.from_user_id,
+    mode: row.mode,
+    day: row.day,
+    start: toHm(row.start_time),
+    end: toHm(row.end_time),
+    courtId: row.court_id ?? '',
+    status: row.status,
+  });
+
+  const toOutgoingRequest = (row: RequestRow): IncomingRequest => ({
+    id: row.id,
+    playerId: row.to_user_id,
+    mode: row.mode,
+    day: row.day,
+    start: toHm(row.start_time),
+    end: toHm(row.end_time),
+    courtId: row.court_id ?? '',
+    status: row.status,
+  });
+
+  const incoming: IncomingRequest[] = isSupabaseConfigured ? incomingRows.map(toIncomingRequest) : mockState;
+  const outgoing: IncomingRequest[] = isSupabaseConfigured ? outgoingRows.map(toOutgoingRequest) : [];
 
   const respond = useCallback((id: string, status: RequestStatus) => {
     if (!isSupabaseConfigured) {
       setMockState((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
       return;
     }
-    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
+    setIncomingRows((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
     supabase.from('match_requests').update({ status }).eq('id', id);
   }, []);
 
@@ -79,9 +95,10 @@ export function useMatchRequests(currentUserId: string | null): Result {
         end_time: input.booking.end,
         court_id: input.booking.court.id,
       });
+      await refetch();
     },
-    [currentUserId]
+    [currentUserId, refetch]
   );
 
-  return { requests, respond, sendRequest, loading };
+  return { incoming, outgoing, respond, sendRequest, loading };
 }

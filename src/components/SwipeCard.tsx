@@ -15,9 +15,10 @@ interface Props {
   active: boolean;
   stackIndex: number;
   onSwipe: (direction: 'left' | 'right') => void;
+  onMenuPress?: () => void;
 }
 
-export default function SwipeCard({ match, mode, active, stackIndex, onSwipe }: Props) {
+export default function SwipeCard({ match, mode, active, stackIndex, onSwipe, onMenuPress }: Props) {
   const position = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   const stackAnim = useRef(new Animated.Value(stackIndex)).current;
 
@@ -88,7 +89,7 @@ export default function SwipeCard({ match, mode, active, stackIndex, onSwipe }: 
       ]}
       {...(active ? panResponder.panHandlers : {})}
     >
-      <MatchCardContent match={match} mode={mode} />
+      <MatchCardContent match={match} mode={mode} onMenuPress={onMenuPress} />
       {active && (
         <>
           <Animated.View style={[styles.stamp, styles.requestStamp, { opacity: requestStampOpacity }]}>

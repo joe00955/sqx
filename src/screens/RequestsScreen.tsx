@@ -7,21 +7,36 @@ import PressScale from '../components/PressScale';
 import { colors, fonts, radius, shadow, spacing } from '../theme';
 
 interface Props {
-  requests: IncomingRequest[];
+  incoming: IncomingRequest[];
+  outgoing: IncomingRequest[];
   players: Player[];
   courts: Court[];
   onRespond: (id: string, status: RequestStatus) => void;
+}
+
+function ContactReveal({ player }: { player: Player }) {
+  if (!player.contactEmail) return null;
+  return (
+    <View style={styles.contactBox}>
+      <Ionicons name="mail-outline" size={14} color={colors.success} style={styles.bookingIcon} />
+      <Text style={styles.contactText}>
+        You're matched! Reach {player.name.split(' ')[0]} at {player.contactEmail}
+      </Text>
+    </View>
+  );
 }
 
 function RequestCard({
   request,
   players,
   courts,
+  variant,
   onRespond,
 }: {
   request: IncomingRequest;
   players: Player[];
   courts: Court[];
+  variant: 'incoming' | 'outgoing';
   onRespond: (id: string, status: RequestStatus) => void;
 }) {
   const player = players.find((p) => p.id === request.playerId);
@@ -59,7 +74,7 @@ function RequestCard({
         </Text>
       </View>
 
-      {request.status === 'pending' ? (
+      {request.status === 'pending' && variant === 'incoming' ? (
         <View style={styles.actionRow}>
           <PressScale style={[styles.actionButton, styles.declineButton]} onPress={() => onRespond(request.id, 'declined')}>
             <Ionicons name="close-outline" size={16} color={colors.textMuted} />
@@ -70,33 +85,41 @@ function RequestCard({
             <Text style={styles.acceptText}>Accept</Text>
           </PressScale>
         </View>
-      ) : (
+      ) : request.status === 'pending' ? (
         <View style={styles.statusRow}>
-          <Ionicons
-            name={request.status === 'accepted' ? 'checkmark-done-circle-outline' : 'close-outline'}
-            size={15}
-            color={request.status === 'accepted' ? colors.success : colors.textFaint}
-          />
-          <Text style={styles.statusText}>{request.status === 'accepted' ? 'Accepted' : 'Declined'}</Text>
+          <Ionicons name="time-outline" size={15} color={colors.textFaint} />
+          <Text style={styles.statusText}>Waiting for a response</Text>
+        </View>
+      ) : (
+        <View>
+          <View style={styles.statusRow}>
+            <Ionicons
+              name={request.status === 'accepted' ? 'checkmark-done-circle-outline' : 'close-outline'}
+              size={15}
+              color={request.status === 'accepted' ? colors.success : colors.textFaint}
+            />
+            <Text style={styles.statusText}>{request.status === 'accepted' ? 'Accepted' : 'Declined'}</Text>
+          </View>
+          {request.status === 'accepted' && <ContactReveal player={player} />}
         </View>
       )}
     </View>
   );
 }
 
-function EmptyPendingState() {
+function EmptyState({ text }: { text: string }) {
   return (
     <View style={styles.emptyState}>
       <Ionicons name="mail-open-outline" size={28} color={colors.textFaint} />
       <Text style={styles.emptyTitle}>All caught up</Text>
-      <Text style={styles.emptySubtitle}>No pending requests right now — new ones will show up here.</Text>
+      <Text style={styles.emptySubtitle}>{text}</Text>
     </View>
   );
 }
 
-export default function RequestsScreen({ requests, players, courts, onRespond }: Props) {
-  const pending = useMemo(() => requests.filter((r) => r.status === 'pending'), [requests]);
-  const resolved = useMemo(() => requests.filter((r) => r.status !== 'pending'), [requests]);
+export default function RequestsScreen({ incoming, outgoing, players, courts, onRespond }: Props) {
+  const pending = useMemo(() => incoming.filter((r) => r.status === 'pending'), [incoming]);
+  const resolved = useMemo(() => incoming.filter((r) => r.status !== 'pending'), [incoming]);
 
   return (
     <View style={styles.container}>
@@ -107,16 +130,27 @@ export default function RequestsScreen({ requests, players, courts, onRespond }:
 
       <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
         {pending.length === 0 ? (
-          <EmptyPendingState />
+          <EmptyState text="No pending requests right now — new ones will show up here." />
         ) : (
-          pending.map((r) => <RequestCard key={r.id} request={r} players={players} courts={courts} onRespond={onRespond} />)
+          pending.map((r) => (
+            <RequestCard key={r.id} request={r} players={players} courts={courts} variant="incoming" onRespond={onRespond} />
+          ))
         )}
 
         {resolved.length > 0 && (
           <>
             <Text style={styles.resolvedHeading}>RESOLVED</Text>
             {resolved.map((r) => (
-              <RequestCard key={r.id} request={r} players={players} courts={courts} onRespond={onRespond} />
+              <RequestCard key={r.id} request={r} players={players} courts={courts} variant="incoming" onRespond={onRespond} />
+            ))}
+          </>
+        )}
+
+        {outgoing.length > 0 && (
+          <>
+            <Text style={styles.resolvedHeading}>SENT BY YOU</Text>
+            {outgoing.map((r) => (
+              <RequestCard key={r.id} request={r} players={players} courts={courts} variant="outgoing" onRespond={onRespond} />
             ))}
           </>
         )}
@@ -230,6 +264,20 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontFamily: fonts.medium,
     fontSize: 13,
+    flex: 1,
+  },
+  contactBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.accentMuted,
+    borderRadius: radius.sm,
+    padding: spacing.md,
+    marginTop: spacing.sm,
+  },
+  contactText: {
+    color: colors.text,
+    fontFamily: fonts.semibold,
+    fontSize: 12.5,
     flex: 1,
   },
   actionRow: {

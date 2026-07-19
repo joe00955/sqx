@@ -97,7 +97,13 @@ export function useProfile(userId: string | null) {
   }, [refetch]);
 
   const createProfile = useCallback(
-    async (input: { name: string; skillLevel: number; homeCourtId: string; availability: TimeSlot[] }) => {
+    async (input: {
+      name: string;
+      skillLevel: number;
+      homeCourtId: string;
+      availability: TimeSlot[];
+      contactEmail?: string | null;
+    }) => {
       if (!userId) return;
       await supabase.from('profiles').insert({
         id: userId,
@@ -105,6 +111,7 @@ export function useProfile(userId: string | null) {
         bio: 'New to SquashX Rally — up for casual games or a fair match.',
         skill_level: input.skillLevel,
         home_court_id: input.homeCourtId,
+        contact_email: input.contactEmail ?? null,
       });
       if (input.availability.length > 0) {
         await supabase.from('availability_slots').insert(
@@ -148,5 +155,13 @@ export function useProfile(userId: string | null) {
     [userId, state.activeSlots]
   );
 
-  return { ...state, refetch, createProfile, updateSkillLevel, toggleSlotActive };
+  const updateLocation = useCallback(
+    async (latitude: number, longitude: number) => {
+      if (!userId) return;
+      await supabase.from('profiles').update({ latitude, longitude }).eq('id', userId);
+    },
+    [userId]
+  );
+
+  return { ...state, refetch, createProfile, updateSkillLevel, toggleSlotActive, updateLocation };
 }

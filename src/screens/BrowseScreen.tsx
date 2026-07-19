@@ -5,6 +5,7 @@ import { Court, MatchMode, Player } from '../data/types';
 import { findMatches, MatchResult, SuggestedBooking } from '../logic/matching';
 import SwipeCard from '../components/SwipeCard';
 import PressScale from '../components/PressScale';
+import SafetyMenu from '../components/SafetyMenu';
 import { colors, fonts, radius, spacing } from '../theme';
 
 type SortMode = 'best' | 'closest' | 'skill' | 'availability';
@@ -38,12 +39,15 @@ interface Props {
   players: Player[];
   courts: Court[];
   onSendRequest?: (player: Player, mode: MatchMode, booking: SuggestedBooking) => void;
+  onBlockPlayer?: (playerId: string) => void;
+  onReportPlayer?: (playerId: string, reason: string, details: string) => void;
 }
 
-export default function BrowseScreen({ me, players, courts, onSendRequest }: Props) {
+export default function BrowseScreen({ me, players, courts, onSendRequest, onBlockPlayer, onReportPlayer }: Props) {
   const [sortMode, setSortMode] = useState<SortMode>('best');
   const [mode, setMode] = useState<MatchMode>('casual');
   const [dismissed, setDismissed] = useState<Record<string, boolean>>({});
+  const [safetyTarget, setSafetyTarget] = useState<Player | null>(null);
 
   const allMatches = useMemo(() => findMatches(me, players, courts), [me, players, courts]);
   const sorted = useMemo(() => sortMatches(allMatches, sortMode), [allMatches, sortMode]);
@@ -58,6 +62,16 @@ export default function BrowseScreen({ me, players, courts, onSendRequest }: Pro
       onSendRequest(match.player, mode, match.suggestedBookings[0]);
     }
     dismiss(match.player.id);
+  };
+
+  const handleBlock = () => {
+    if (safetyTarget && onBlockPlayer) onBlockPlayer(safetyTarget.id);
+    if (safetyTarget) dismiss(safetyTarget.id);
+  };
+
+  const handleReport = (reason: string, details: string) => {
+    if (safetyTarget && onReportPlayer) onReportPlayer(safetyTarget.id, reason, details);
+    if (safetyTarget) dismiss(safetyTarget.id);
   };
 
   return (
@@ -129,6 +143,7 @@ export default function BrowseScreen({ me, players, courts, onSendRequest }: Pro
                   active={stackIndex === 0}
                   stackIndex={stackIndex}
                   onSwipe={(direction) => handleSwipe(match, direction)}
+                  onMenuPress={stackIndex === 0 ? () => setSafetyTarget(match.player) : undefined}
                 />
               );
             })
@@ -151,6 +166,14 @@ export default function BrowseScreen({ me, players, courts, onSendRequest }: Pro
           </PressScale>
         </View>
       )}
+
+      <SafetyMenu
+        visible={!!safetyTarget}
+        playerName={safetyTarget?.name ?? ''}
+        onClose={() => setSafetyTarget(null)}
+        onBlock={handleBlock}
+        onReport={handleReport}
+      />
     </View>
   );
 }

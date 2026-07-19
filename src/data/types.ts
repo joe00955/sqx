@@ -26,6 +26,7 @@ export interface Player {
   availability: TimeSlot[];
   competitiveElo: number;
   casualGamesPlayed: number;
+  contactEmail?: string;
 }
 
 export interface Community {

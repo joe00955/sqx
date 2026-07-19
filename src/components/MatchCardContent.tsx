@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { MatchResult } from '../logic/matching';
 import { MatchMode } from '../data/types';
@@ -9,6 +9,7 @@ import { colors, fonts, radius, shadow, spacing } from '../theme';
 interface Props {
   match: MatchResult;
   mode: MatchMode;
+  onMenuPress?: () => void;
 }
 
 function skillMatchMeta(skillDiff: number): { label: string; color: string } {
@@ -17,13 +18,18 @@ function skillMatchMeta(skillDiff: number): { label: string; color: string } {
   return { label: 'Bigger skill gap — good for a friendly', color: colors.textMuted };
 }
 
-export default function MatchCardContent({ match, mode }: Props) {
+export default function MatchCardContent({ match, mode, onMenuPress }: Props) {
   const { player, score, skillDiff, suggestedBookings } = match;
   const best = suggestedBookings[0];
   const skillMeta = skillMatchMeta(skillDiff);
 
   return (
     <View style={styles.card}>
+      {onMenuPress && (
+        <Pressable style={styles.menuButton} onPress={onMenuPress} hitSlop={8}>
+          <Ionicons name="ellipsis-horizontal" size={16} color={colors.textMuted} />
+        </Pressable>
+      )}
       <View style={styles.headerRow}>
         <Avatar playerId={player.id} size={64} style={styles.avatar} />
         <View style={styles.headerText}>
@@ -99,6 +105,18 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     ...shadow,
   },
+  menuButton: {
+    position: 'absolute',
+    top: spacing.md,
+    right: spacing.md,
+    zIndex: 5,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceAlt,
+  },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -128,6 +146,7 @@ const styles = StyleSheet.create({
   },
   scoreWrap: {
     alignItems: 'flex-end',
+    marginTop: 20,
   },
   scoreValue: {
     color: colors.accent,
