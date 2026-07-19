@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { MatchResult } from '../logic/matching';
 import { MatchMode } from '../data/types';
 import Avatar from './Avatar';
+import VerifiedBadge from './VerifiedBadge';
 import { colors, fonts, radius, shadow, spacing } from '../theme';
 
 interface Props {
@@ -31,9 +32,12 @@ export default function MatchCardContent({ match, mode, onMenuPress }: Props) {
         </Pressable>
       )}
       <View style={styles.headerRow}>
-        <Avatar playerId={player.id} size={64} style={styles.avatar} />
+        <Avatar playerId={player.id} imageUrl={player.avatarUrl} size={64} style={styles.avatar} />
         <View style={styles.headerText}>
-          <Text style={styles.name}>{player.name}</Text>
+          <View style={styles.nameRow}>
+            <Text style={styles.name}>{player.name}</Text>
+            {player.verificationStatus === 'verified' && <VerifiedBadge />}
+          </View>
           <View style={styles.subtitleRow}>
             <Ionicons name="location-outline" size={13} color={colors.textMuted} />
             <Text style={styles.subtitle}>
@@ -127,6 +131,11 @@ const styles = StyleSheet.create({
   },
   headerText: {
     flex: 1,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   name: {
     color: colors.text,

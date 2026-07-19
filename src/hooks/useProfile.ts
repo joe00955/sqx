@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { Day, TimeSlot } from '../data/types';
+import { Day, TimeSlot, VerificationStatus } from '../data/types';
 import { slotKey } from '../logic/slotKey';
 
 interface ProfileRow {
@@ -10,6 +10,9 @@ interface ProfileRow {
   home_court_id: string | null;
   competitive_elo: number;
   casual_games_played: number;
+  avatar_url: string | null;
+  verification_status: VerificationStatus;
+  is_admin: boolean;
 }
 
 interface AvailabilityRow {
@@ -30,6 +33,9 @@ interface ProfileState {
   casualGamesPlayed: number;
   baseAvailability: TimeSlot[];
   activeSlots: Record<string, boolean>;
+  avatarUrl: string | null;
+  verificationStatus: VerificationStatus;
+  isAdmin: boolean;
 }
 
 const EMPTY: ProfileState = {
@@ -43,6 +49,9 @@ const EMPTY: ProfileState = {
   casualGamesPlayed: 0,
   baseAvailability: [],
   activeSlots: {},
+  avatarUrl: null,
+  verificationStatus: 'unverified',
+  isAdmin: false,
 };
 
 const toHm = (time: string) => time.slice(0, 5);
@@ -58,7 +67,13 @@ export function useProfile(userId: string | null) {
     setState((prev) => ({ ...prev, loading: true }));
 
     const [{ data: profile }, { data: slots }] = await Promise.all([
-      supabase.from('profiles').select('name, bio, skill_level, home_court_id, competitive_elo, casual_games_played').eq('id', userId).maybeSingle(),
+      supabase
+        .from('profiles')
+        .select(
+          'name, bio, skill_level, home_court_id, competitive_elo, casual_games_played, avatar_url, verification_status, is_admin'
+        )
+        .eq('id', userId)
+        .maybeSingle(),
       supabase.from('availability_slots').select('day, start_time, end_time, active').eq('user_id', userId),
     ]);
 
@@ -89,6 +104,9 @@ export function useProfile(userId: string | null) {
       casualGamesPlayed: p.casual_games_played,
       baseAvailability,
       activeSlots,
+      avatarUrl: p.avatar_url,
+      verificationStatus: p.verification_status,
+      isAdmin: p.is_admin,
     });
   }, [userId]);
 

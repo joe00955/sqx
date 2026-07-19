@@ -1,13 +1,14 @@
-import React, { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useRef, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Court, Player, TimeSlot } from '../data/types';
+import { Court, Player, TimeSlot, VerificationStatus } from '../data/types';
 import { skillLabelFor } from '../logic/skill';
 import { computeSkillLevel, skillQuizQuestions } from '../logic/skillQuiz';
 import { slotKey } from '../logic/slotKey';
 import Avatar from '../components/Avatar';
 import PressScale from '../components/PressScale';
 import SkillQuizForm from '../components/SkillQuizForm';
+import VerifiedBadge from '../components/VerifiedBadge';
 import { colors, fonts, radius, spacing } from '../theme';
 
 interface Props {
@@ -19,6 +20,9 @@ interface Props {
   activeSlots: Record<string, boolean>;
   onToggleSlot: (key: string) => void;
   onSignOut?: () => void;
+  verificationStatus?: VerificationStatus;
+  onUploadAvatar?: (file: File) => Promise<string | null>;
+  onUploadVerificationVideo?: (file: File) => Promise<boolean>;
 }
 
 const MIN_SKILL = 1;
@@ -33,6 +37,9 @@ export default function ProfileScreen({
   activeSlots,
   onToggleSlot,
   onSignOut,
+  verificationStatus,
+  onUploadAvatar,
+  onUploadVerificationVideo,
 }: Props) {
   const homeCourt = courts.find((c) => c.id === me.homeCourtId);
   const skillFraction = (skillLevel - MIN_SKILL) / (MAX_SKILL - MIN_SKILL);
@@ -40,6 +47,27 @@ export default function ProfileScreen({
   const [retaking, setRetaking] = useState(false);
   const [quizAnswers, setQuizAnswers] = useState<(number | null)[]>(() => skillQuizQuestions.map(() => null));
   const quizComplete = quizAnswers.every((a) => a !== null);
+
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [videoUploading, setVideoUploading] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAvatarSelected = async (e: { target: { files: FileList | null } }) => {
+    const file = e.target.files?.[0];
+    if (!file || !onUploadAvatar) return;
+    setAvatarUploading(true);
+    await onUploadAvatar(file);
+    setAvatarUploading(false);
+  };
+
+  const handleVideoSelected = async (e: { target: { files: FileList | null } }) => {
+    const file = e.target.files?.[0];
+    if (!file || !onUploadVerificationVideo) return;
+    setVideoUploading(true);
+    await onUploadVerificationVideo(file);
+    setVideoUploading(false);
+  };
 
   const startRetake = () => {
     setQuizAnswers(skillQuizQuestions.map(() => null));
@@ -58,8 +86,35 @@ export default function ProfileScreen({
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
       <View style={styles.hero}>
-        <Avatar playerId={me.id} size={96} rotate={false} style={styles.heroAvatar} />
-        <Text style={styles.heroName}>{me.name}</Text>
+        <View style={styles.heroAvatarWrap}>
+          <Avatar playerId={me.id} imageUrl={me.avatarUrl} size={96} rotate={false} style={styles.heroAvatar} />
+          {onUploadAvatar && (
+            <Pressable
+              style={styles.avatarEditButton}
+              onPress={() => avatarInputRef.current?.click()}
+              hitSlop={8}
+            >
+              {avatarUploading ? (
+                <ActivityIndicator size="small" color={colors.accentText} />
+              ) : (
+                <Ionicons name="camera" size={14} color={colors.accentText} />
+              )}
+            </Pressable>
+          )}
+          {onUploadAvatar && (
+            <input
+              ref={avatarInputRef}
+              type="file"
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={handleAvatarSelected}
+            />
+          )}
+        </View>
+        <View style={styles.nameRow}>
+          <Text style={styles.heroName}>{me.name}</Text>
+          {verificationStatus === 'verified' && <VerifiedBadge size={13} />}
+        </View>
         <View style={styles.homeCourtRow}>
           <Ionicons name="pin-outline" size={13} color={colors.textMuted} />
           <Text style={styles.muted}>{homeCourt?.name}</Text>
@@ -151,6 +206,51 @@ export default function ProfileScreen({
         </View>
       </View>
 
+      {onUploadVerificationVideo && (
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Identity verification</Text>
+          {verificationStatus === 'verified' ? (
+            <View style={styles.verifiedRow}>
+              <Ionicons name="shield-checkmark" size={18} color={colors.success} />
+              <Text style={styles.verifiedRowText}>You're verified — other players can see your badge.</Text>
+            </View>
+          ) : verificationStatus === 'pending' ? (
+            <View style={styles.verifiedRow}>
+              <Ionicons name="time-outline" size={18} color={colors.textMuted} />
+              <Text style={styles.mutedSmallNoMargin}>
+                Your video is with our team for review. This usually doesn't take long.
+              </Text>
+            </View>
+          ) : (
+            <View>
+              <Text style={styles.mutedSmall}>
+                {verificationStatus === 'rejected'
+                  ? "We couldn't confirm your last submission — add a real profile photo and a short video of your face, and we'll take another look."
+                  : "Add a real profile photo, then upload a short video of your face so our team can confirm you're really you. This builds trust with players you meet in person."}
+              </Text>
+              <PressScale style={styles.verifyButton} onPress={() => videoInputRef.current?.click()} disabled={videoUploading}>
+                {videoUploading ? (
+                  <ActivityIndicator size="small" color={colors.accentText} />
+                ) : (
+                  <>
+                    <Ionicons name="videocam-outline" size={16} color={colors.accentText} />
+                    <Text style={styles.verifyButtonText}>Upload verification video</Text>
+                  </>
+                )}
+              </PressScale>
+              <input
+                ref={videoInputRef}
+                type="file"
+                accept="video/*"
+                capture="user"
+                style={{ display: 'none' }}
+                onChange={handleVideoSelected}
+              />
+            </View>
+          )}
+        </View>
+      )}
+
       {onSignOut && (
         <Pressable style={styles.signOutButton} onPress={onSignOut} hitSlop={8}>
           <Ionicons name="log-out-outline" size={15} color={colors.danger} />
@@ -183,10 +283,30 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.lg,
     marginBottom: spacing.md + 2,
   },
+  heroAvatarWrap: {
+    marginBottom: spacing.md,
+  },
   heroAvatar: {
     borderWidth: 3,
     borderColor: colors.accent,
-    marginBottom: spacing.md,
+  },
+  avatarEditButton: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: colors.background,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   heroName: {
     color: colors.text,
@@ -355,6 +475,37 @@ const styles = StyleSheet.create({
   slotChipTextInactive: {
     color: colors.textFaint,
     textDecorationLine: 'line-through',
+  },
+  verifiedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  verifiedRowText: {
+    color: colors.text,
+    fontFamily: fonts.medium,
+    fontSize: 13,
+    flex: 1,
+  },
+  mutedSmallNoMargin: {
+    color: colors.textMuted,
+    fontFamily: fonts.medium,
+    fontSize: 12,
+    flex: 1,
+  },
+  verifyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: colors.accent,
+    borderRadius: radius.sm,
+    paddingVertical: 12,
+  },
+  verifyButtonText: {
+    color: colors.accentText,
+    fontFamily: fonts.bold,
+    fontSize: 13.5,
   },
   signOutButton: {
     flexDirection: 'row',

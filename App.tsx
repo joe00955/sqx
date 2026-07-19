@@ -21,6 +21,7 @@ import OnboardingScreen from './src/screens/OnboardingScreen';
 import SquashXHomeScreen from './src/screens/SquashXHomeScreen';
 import LegalScreen from './src/screens/LegalScreen';
 import AuthScreen from './src/screens/AuthScreen';
+import AdminVerificationScreen from './src/screens/AdminVerificationScreen';
 import Logo from './src/components/Logo';
 import AccentMotif from './src/components/AccentMotif';
 import FadeIn from './src/components/FadeIn';
@@ -38,16 +39,24 @@ import { useCommunities } from './src/hooks/useCommunities';
 import { useMatchRequests } from './src/hooks/useMatchRequests';
 import { useLocation } from './src/hooks/useLocation';
 import { useSafety } from './src/hooks/useSafety';
+import { useVerification } from './src/hooks/useVerification';
+import { useAdminVerifications } from './src/hooks/useAdminVerifications';
 
-type Tab = 'browse' | 'requests' | 'communities' | 'ladders' | 'profile';
+type Tab = 'browse' | 'requests' | 'communities' | 'ladders' | 'profile' | 'admin';
 
-const tabs: { key: Tab; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+const baseTabs: { key: Tab; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
   { key: 'browse', label: 'Browse', icon: 'search-outline' },
   { key: 'requests', label: 'Requests', icon: 'mail-outline' },
   { key: 'communities', label: 'Communities', icon: 'people-outline' },
   { key: 'ladders', label: 'Ladders', icon: 'podium-outline' },
   { key: 'profile', label: 'Profile', icon: 'person-outline' },
 ];
+
+const adminTab: { key: Tab; label: string; icon: keyof typeof Ionicons.glyphMap } = {
+  key: 'admin',
+  label: 'Admin',
+  icon: 'shield-outline',
+};
 
 const WIDE_BREAKPOINT = 820;
 const MAX_CONTENT_WIDTH = 720;
@@ -80,6 +89,8 @@ function routeForPath(pathname: string): Route {
       return { view: 'rally', tab: 'profile' };
     case '/browse':
       return { view: 'rally', tab: 'browse' };
+    case '/admin':
+      return { view: 'rally', tab: 'admin' };
     default:
       return { view: 'hub', tab: 'browse' };
   }
@@ -162,6 +173,22 @@ function AppShell() {
     livePlayers
   );
   const { incoming: incomingRequests, outgoing: outgoingRequests, respond: respondToRequest, sendRequest } = useMatchRequests(userId);
+  const verification = useVerification(userId);
+  const isAdmin = isSupabaseConfigured && profile.isAdmin;
+  const adminVerifications = useAdminVerifications(isAdmin);
+  const visibleTabs = isAdmin ? [...baseTabs, adminTab] : baseTabs;
+
+  const handleUploadAvatar = async (file: File) => {
+    const url = await verification.uploadAvatar(file);
+    await profile.refetch();
+    return url;
+  };
+
+  const handleUploadVerificationVideo = async (file: File) => {
+    const ok = await verification.uploadVerificationVideo(file);
+    await profile.refetch();
+    return ok;
+  };
 
   useEffect(() => {
     if (!isSupabaseConfigured || !userId || !myLocation) return;
@@ -225,6 +252,8 @@ function AppShell() {
         availability: profile.baseAvailability.filter((slot) => profile.activeSlots[slotKey(slot)]),
         competitiveElo: profile.competitiveElo,
         casualGamesPlayed: profile.casualGamesPlayed,
+        avatarUrl: profile.avatarUrl ?? undefined,
+        verificationStatus: profile.verificationStatus,
       };
     }
     return {
@@ -359,6 +388,13 @@ function AppShell() {
       )
     ) : tab === 'ladders' ? (
       <LaddersScreen me={me} players={livePlayers} />
+    ) : tab === 'admin' ? (
+      <AdminVerificationScreen
+        pending={adminVerifications.pending}
+        loading={adminVerifications.loading}
+        onApprove={adminVerifications.approve}
+        onReject={adminVerifications.reject}
+      />
     ) : (
       <ProfileScreen
         me={me}
@@ -369,6 +405,9 @@ function AppShell() {
         activeSlots={isSupabaseConfigured ? profile.activeSlots : activeSlots}
         onToggleSlot={toggleSlot}
         onSignOut={isSupabaseConfigured ? signOut : undefined}
+        verificationStatus={isSupabaseConfigured ? profile.verificationStatus : undefined}
+        onUploadAvatar={isSupabaseConfigured ? handleUploadAvatar : undefined}
+        onUploadVerificationVideo={isSupabaseConfigured ? handleUploadVerificationVideo : undefined}
       />
     );
 
@@ -384,7 +423,7 @@ function AppShell() {
             <View style={styles.sidebarLogoWrap}>
               <Logo onPress={() => setView('hub')} />
             </View>
-            {tabs.map((t) => {
+            {visibleTabs.map((t) => {
               const active = t.key === tab;
               const badge = t.key === 'requests' ? pendingCount : 0;
               return (
@@ -430,7 +469,7 @@ function AppShell() {
       </FadeIn>
 
       <View style={styles.tabBar}>
-        {tabs.map((t) => {
+        {visibleTabs.map((t) => {
           const active = t.key === tab;
           const badge = t.key === 'requests' ? pendingCount : 0;
           return (

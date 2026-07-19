@@ -5,12 +5,13 @@ import { colors } from '../theme';
 
 interface Props {
   playerId: string;
+  imageUrl?: string;
   size?: number;
   rotate?: boolean;
   style?: StyleProp<ViewStyle>;
 }
 
-export default function Avatar({ playerId, size = 46, rotate = true, style }: Props) {
+export default function Avatar({ playerId, imageUrl, size = 46, rotate = true, style }: Props) {
   return (
     <View
       style={[
@@ -25,7 +26,11 @@ export default function Avatar({ playerId, size = 46, rotate = true, style }: Pr
         style,
       ]}
     >
-      <Image source={avatarFor(playerId)} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+      <Image
+        source={imageUrl ? { uri: imageUrl } : avatarFor(playerId)}
+        style={{ width: '100%', height: '100%' }}
+        resizeMode="cover"
+      />
     </View>
   );
 }

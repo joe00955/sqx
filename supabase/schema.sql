@@ -33,6 +33,10 @@ create table if not exists profiles (
   latitude double precision,
   longitude double precision,
   contact_email text,
+  verification_status text not null default 'unverified'
+    check (verification_status in ('unverified', 'pending', 'verified', 'rejected')),
+  verification_video_path text,
+  is_admin boolean not null default false,
   created_at timestamptz not null default now()
 );
 
@@ -146,3 +150,33 @@ create policy "users manage their own block list" on blocked_users
 -- Reports: write-only from the client; no one can read reports back via the API
 create policy "users can file a report" on reports
   for insert with check (auth.uid() = reporter_id);
+
+-- ── Identity verification: photo + video review ──────────────────────
+-- 'avatars' is public-read (profile photos); 'verification-videos' is
+-- private — only the uploader and admins (profiles.is_admin) can read it.
+insert into storage.buckets (id, name, public)
+values ('avatars', 'avatars', true)
+on conflict (id) do nothing;
+
+insert into storage.buckets (id, name, public)
+values ('verification-videos', 'verification-videos', false)
+on conflict (id) do nothing;
+
+create policy "avatar photos are publicly viewable" on storage.objects
+  for select using (bucket_id = 'avatars');
+create policy "users can upload their own avatar" on storage.objects
+  for insert with check (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+create policy "users can replace their own avatar" on storage.objects
+  for update using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+
+create policy "users can upload their own verification video" on storage.objects
+  for insert with check (bucket_id = 'verification-videos' and (storage.foldername(name))[1] = auth.uid()::text);
+create policy "users can replace their own verification video" on storage.objects
+  for update using (bucket_id = 'verification-videos' and (storage.foldername(name))[1] = auth.uid()::text);
+create policy "users can view their own verification video" on storage.objects
+  for select using (bucket_id = 'verification-videos' and (storage.foldername(name))[1] = auth.uid()::text);
+create policy "admins can view any verification video" on storage.objects
+  for select using (
+    bucket_id = 'verification-videos'
+    and exists (select 1 from profiles where profiles.id = auth.uid() and profiles.is_admin = true)
+  );

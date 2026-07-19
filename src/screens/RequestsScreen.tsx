@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Court, IncomingRequest, Player, RequestStatus } from '../data/types';
 import Avatar from '../components/Avatar';
 import PressScale from '../components/PressScale';
+import VerifiedBadge from '../components/VerifiedBadge';
 import { colors, fonts, radius, shadow, spacing } from '../theme';
 
 interface Props {
@@ -48,9 +49,12 @@ function RequestCard({
   return (
     <View style={[styles.card, resolved && styles.cardResolved]}>
       <View style={styles.headerRow}>
-        <Avatar playerId={player.id} size={42} style={styles.avatar} />
+        <Avatar playerId={player.id} imageUrl={player.avatarUrl} size={42} style={styles.avatar} />
         <View style={styles.headerText}>
-          <Text style={styles.name}>{player.name}</Text>
+          <View style={styles.nameRow}>
+            <Text style={styles.name}>{player.name}</Text>
+            {player.verificationStatus === 'verified' && <VerifiedBadge size={11} />}
+          </View>
           <Text style={styles.cardSubtitle}>
             {player.skillLabel} · {player.distanceKm.toFixed(1)} km away
           </Text>
@@ -216,6 +220,11 @@ const styles = StyleSheet.create({
   },
   headerText: {
     flex: 1,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   name: {
     color: colors.text,

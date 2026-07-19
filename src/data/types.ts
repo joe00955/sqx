@@ -1,4 +1,5 @@
 export type Day = 'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat' | 'Sun';
+export type VerificationStatus = 'unverified' | 'pending' | 'verified' | 'rejected';
 
 export interface TimeSlot {
   day: Day;
@@ -27,6 +28,8 @@ export interface Player {
   competitiveElo: number;
   casualGamesPlayed: number;
   contactEmail?: string;
+  avatarUrl?: string;
+  verificationStatus?: VerificationStatus;
 }
 
 export interface Community {

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { players as mockPlayers } from '../data/mockData';
-import { Day, Player, TimeSlot } from '../data/types';
+import { Day, Player, TimeSlot, VerificationStatus } from '../data/types';
 import { skillLabelFor } from '../logic/skill';
 import { haversineKm } from '../logic/geo';
 import { Coords } from './useLocation';
@@ -17,6 +17,8 @@ interface ProfileRow {
   latitude: number | null;
   longitude: number | null;
   contact_email: string | null;
+  avatar_url: string | null;
+  verification_status: VerificationStatus;
 }
 
 interface AvailabilityRow {
@@ -37,6 +39,8 @@ interface RawPlayer {
   latitude: number | null;
   longitude: number | null;
   contactEmail: string | null;
+  avatarUrl: string | null;
+  verificationStatus: VerificationStatus;
   availability: TimeSlot[];
 }
 
@@ -58,7 +62,9 @@ export function usePlayers(currentUserId: string | null, myLocation?: Coords | n
     (async () => {
       let profilesQuery = supabase
         .from('profiles')
-        .select('id, name, bio, skill_level, home_court_id, competitive_elo, casual_games_played, latitude, longitude, contact_email');
+        .select(
+          'id, name, bio, skill_level, home_court_id, competitive_elo, casual_games_played, latitude, longitude, contact_email, avatar_url, verification_status'
+        );
       if (currentUserId) {
         profilesQuery = profilesQuery.neq('id', currentUserId);
       }
@@ -88,6 +94,8 @@ export function usePlayers(currentUserId: string | null, myLocation?: Coords | n
           latitude: row.latitude,
           longitude: row.longitude,
           contactEmail: row.contact_email,
+          avatarUrl: row.avatar_url,
+          verificationStatus: row.verification_status,
           availability: slotsByUser.get(row.id) ?? [],
         }))
       );
@@ -117,6 +125,8 @@ export function usePlayers(currentUserId: string | null, myLocation?: Coords | n
       competitiveElo: row.competitiveElo,
       casualGamesPlayed: row.casualGamesPlayed,
       contactEmail: row.contactEmail ?? undefined,
+      avatarUrl: row.avatarUrl ?? undefined,
+      verificationStatus: row.verificationStatus,
     }));
   }, [rawPlayers, myLocation]);
 
