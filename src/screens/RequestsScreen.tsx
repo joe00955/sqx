@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { courts, players } from '../data/mockData';
 import { IncomingRequest, RequestStatus } from '../data/types';
+import Avatar from '../components/Avatar';
 import PressScale from '../components/PressScale';
 import { colors, fonts, radius, shadow, spacing } from '../theme';
 
@@ -21,9 +22,7 @@ function RequestCard({ request, onRespond }: { request: IncomingRequest; onRespo
   return (
     <View style={[styles.card, resolved && styles.cardResolved]}>
       <View style={styles.headerRow}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{player.initials}</Text>
-        </View>
+        <Avatar playerId={player.id} size={42} style={styles.avatar} />
         <View style={styles.headerText}>
           <Text style={styles.name}>{player.name}</Text>
           <Text style={styles.cardSubtitle}>
@@ -168,20 +167,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   avatar: {
-    width: 42,
-    height: 42,
-    borderRadius: 13,
-    backgroundColor: colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
     marginRight: spacing.md,
-    transform: [{ rotate: '-4deg' }],
-  },
-  avatarText: {
-    color: colors.accentText,
-    fontFamily: fonts.extrabold,
-    fontSize: 14,
-    transform: [{ rotate: '4deg' }],
   },
   headerText: {
     flex: 1,

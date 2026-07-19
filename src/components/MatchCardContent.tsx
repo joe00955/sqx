@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import React from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { MatchResult } from '../logic/matching';
-import PressScale from './PressScale';
+import { MatchMode } from '../data/types';
+import Avatar from './Avatar';
 import { colors, fonts, radius, shadow, spacing } from '../theme';
 
 interface Props {
   match: MatchResult;
+  mode: MatchMode;
 }
 
 function skillMatchMeta(skillDiff: number): { label: string; color: string } {
@@ -15,11 +17,7 @@ function skillMatchMeta(skillDiff: number): { label: string; color: string } {
   return { label: 'Bigger skill gap — good for a friendly', color: colors.textMuted };
 }
 
-type MatchMode = 'casual' | 'competitive';
-
-export default function MatchCard({ match }: Props) {
-  const [requested, setRequested] = useState(false);
-  const [mode, setMode] = useState<MatchMode>('casual');
+export default function MatchCardContent({ match, mode }: Props) {
   const { player, score, skillDiff, suggestedBookings } = match;
   const best = suggestedBookings[0];
   const skillMeta = skillMatchMeta(skillDiff);
@@ -27,9 +25,7 @@ export default function MatchCard({ match }: Props) {
   return (
     <View style={styles.card}>
       <View style={styles.headerRow}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{player.initials}</Text>
-        </View>
+        <Avatar playerId={player.id} size={64} style={styles.avatar} />
         <View style={styles.headerText}>
           <Text style={styles.name}>{player.name}</Text>
           <View style={styles.subtitleRow}>
@@ -77,57 +73,28 @@ export default function MatchCard({ match }: Props) {
         </View>
       )}
 
-      {!requested && (
-        <View style={styles.modeRow}>
-          <Pressable
-            style={[styles.modeChip, mode === 'casual' && styles.modeChipActive]}
-            onPress={() => setMode('casual')}
-          >
-            <Ionicons
-              name="happy-outline"
-              size={13}
-              color={mode === 'casual' ? colors.accentText : colors.textMuted}
-            />
-            <Text style={[styles.modeText, mode === 'casual' && styles.modeTextActive]}>Casual</Text>
-          </Pressable>
-          <Pressable
-            style={[styles.modeChip, mode === 'competitive' && styles.modeChipActive]}
-            onPress={() => setMode('competitive')}
-          >
-            <Ionicons
-              name="podium-outline"
-              size={13}
-              color={mode === 'competitive' ? colors.accentText : colors.textMuted}
-            />
-            <Text style={[styles.modeText, mode === 'competitive' && styles.modeTextActive]}>
-              Competitive · affects ELO
-            </Text>
-          </Pressable>
-        </View>
-      )}
+      <View style={styles.spacer} />
 
-      <PressScale
-        style={[styles.button, requested && styles.buttonRequested]}
-        onPress={() => setRequested(true)}
-        disabled={requested}
-      >
-        {requested && <Ionicons name="checkmark-circle" size={16} color={colors.success} style={styles.buttonIcon} />}
-        <Text style={[styles.buttonText, requested && styles.buttonTextRequested]}>
-          {requested
-            ? `${mode === 'casual' ? 'Casual' : 'Competitive'} request sent`
-            : 'Send match request'}
+      <View style={styles.modeFooter}>
+        <Ionicons
+          name={mode === 'competitive' ? 'podium-outline' : 'happy-outline'}
+          size={13}
+          color={colors.textFaint}
+        />
+        <Text style={styles.modeFooterText}>
+          Swiping right sends a {mode === 'competitive' ? 'competitive (affects ELO)' : 'casual'} request
         </Text>
-      </PressScale>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
+    flex: 1,
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     padding: spacing.lg,
-    marginBottom: spacing.md + 2,
     borderWidth: 1,
     borderColor: colors.border,
     ...shadow,
@@ -135,23 +102,10 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
   },
   avatar: {
-    width: 46,
-    height: 46,
-    borderRadius: 14,
-    backgroundColor: colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
     marginRight: spacing.md,
-    transform: [{ rotate: '-4deg' }],
-  },
-  avatarText: {
-    color: colors.accentText,
-    fontFamily: fonts.extrabold,
-    fontSize: 15,
-    transform: [{ rotate: '4deg' }],
   },
   headerText: {
     flex: 1,
@@ -159,7 +113,7 @@ const styles = StyleSheet.create({
   name: {
     color: colors.text,
     fontFamily: fonts.bold,
-    fontSize: 16,
+    fontSize: 19,
   },
   subtitleRow: {
     flexDirection: 'row',
@@ -170,7 +124,7 @@ const styles = StyleSheet.create({
   subtitle: {
     color: colors.textMuted,
     fontFamily: fonts.medium,
-    fontSize: 12.5,
+    fontSize: 13,
   },
   scoreWrap: {
     alignItems: 'flex-end',
@@ -178,8 +132,8 @@ const styles = StyleSheet.create({
   scoreValue: {
     color: colors.accent,
     fontFamily: fonts.display,
-    fontSize: 26,
-    lineHeight: 26,
+    fontSize: 30,
+    lineHeight: 30,
   },
   scoreUnit: {
     color: colors.textFaint,
@@ -188,29 +142,29 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   scoreTrack: {
-    height: 4,
-    borderRadius: 2,
+    height: 5,
+    borderRadius: 3,
     backgroundColor: colors.surfaceAlt,
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
     overflow: 'hidden',
   },
   scoreFill: {
     height: '100%',
-    borderRadius: 2,
+    borderRadius: 3,
     backgroundColor: colors.accent,
   },
   bio: {
     color: colors.textMuted,
     fontFamily: fonts.regular,
-    fontSize: 13,
-    marginBottom: spacing.sm,
-    lineHeight: 18,
+    fontSize: 14,
+    marginBottom: spacing.md,
+    lineHeight: 20,
   },
   skillNoteRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
   },
   dot: {
     width: 6,
@@ -220,7 +174,7 @@ const styles = StyleSheet.create({
   skillNote: {
     color: colors.text,
     fontFamily: fonts.medium,
-    fontSize: 12,
+    fontSize: 13,
   },
   bookingBox: {
     flexDirection: 'row',
@@ -228,7 +182,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceAlt,
     borderRadius: radius.sm,
     padding: spacing.md,
-    marginBottom: spacing.md,
     overflow: 'hidden',
   },
   bookingAccent: {
@@ -257,76 +210,38 @@ const styles = StyleSheet.create({
   bookingDetail: {
     color: colors.text,
     fontFamily: fonts.medium,
-    fontSize: 13,
+    fontSize: 14,
   },
   bookingMore: {
     color: colors.textMuted,
     fontFamily: fonts.regular,
-    fontSize: 11,
+    fontSize: 12,
     marginTop: 2,
   },
   noOverlapBox: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginBottom: spacing.md,
   },
   noOverlap: {
     color: colors.textMuted,
     fontFamily: fonts.regular,
-    fontSize: 12,
+    fontSize: 13,
     flex: 1,
   },
-  modeRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: spacing.sm,
+  spacer: {
+    flex: 1,
   },
-  modeChip: {
+  modeFooter: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderRadius: radius.pill,
-    backgroundColor: colors.surfaceAlt,
-    borderWidth: 1,
-    borderColor: colors.border,
+    gap: 6,
+    paddingTop: spacing.md,
   },
-  modeChipActive: {
-    backgroundColor: colors.accent,
-    borderColor: colors.accent,
-  },
-  modeText: {
-    color: colors.textMuted,
-    fontFamily: fonts.semibold,
+  modeFooterText: {
+    color: colors.textFaint,
+    fontFamily: fonts.medium,
     fontSize: 11.5,
-  },
-  modeTextActive: {
-    color: colors.accentText,
-  },
-  button: {
-    flexDirection: 'row',
-    backgroundColor: colors.accent,
-    borderRadius: radius.sm,
-    paddingVertical: 11,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  buttonRequested: {
-    backgroundColor: colors.surfaceAlt,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  buttonIcon: {
-    marginRight: 6,
-  },
-  buttonText: {
-    color: colors.accentText,
-    fontFamily: fonts.bold,
-    fontSize: 14,
-  },
-  buttonTextRequested: {
-    color: colors.textMuted,
+    flex: 1,
   },
 });

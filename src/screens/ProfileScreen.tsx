@@ -6,6 +6,7 @@ import { Player, TimeSlot } from '../data/types';
 import { skillLabelFor } from '../logic/skill';
 import { computeSkillLevel, skillQuizQuestions } from '../logic/skillQuiz';
 import { slotKey } from '../logic/slotKey';
+import Avatar from '../components/Avatar';
 import PressScale from '../components/PressScale';
 import SkillQuizForm from '../components/SkillQuizForm';
 import { colors, fonts, radius, spacing } from '../theme';
@@ -46,26 +47,35 @@ export default function ProfileScreen({ me, baseAvailability, skillLevel, onSkil
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-      <Text style={styles.title}>YOUR PROFILE</Text>
+      <View style={styles.hero}>
+        <Avatar playerId={me.id} size={96} rotate={false} style={styles.heroAvatar} />
+        <Text style={styles.heroName}>{me.name}</Text>
+        <View style={styles.homeCourtRow}>
+          <Ionicons name="pin-outline" size={13} color={colors.textMuted} />
+          <Text style={styles.muted}>{homeCourt?.name}</Text>
+        </View>
+        <Text style={styles.heroBio}>{me.bio}</Text>
 
-      <View style={styles.card}>
-        <View style={styles.headerRow}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{me.initials}</Text>
+        <View style={styles.statRow}>
+          <View style={styles.statCell}>
+            <Text style={styles.statValue}>{skillLevel.toFixed(1)}</Text>
+            <Text style={styles.statLabel}>SKILL</Text>
           </View>
-          <View>
-            <Text style={styles.name}>{me.name}</Text>
-            <View style={styles.homeCourtRow}>
-              <Ionicons name="pin-outline" size={13} color={colors.textMuted} />
-              <Text style={styles.muted}>{homeCourt?.name}</Text>
-            </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statCell}>
+            <Text style={styles.statValue}>{me.competitiveElo}</Text>
+            <Text style={styles.statLabel}>ELO</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statCell}>
+            <Text style={styles.statValue}>{me.casualGamesPlayed}</Text>
+            <Text style={styles.statLabel}>GAMES</Text>
           </View>
         </View>
-        <Text style={styles.bio}>{me.bio}</Text>
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Skill level</Text>
+        <Text style={styles.sectionTitle}>Skill assessment</Text>
         {retaking ? (
           <View>
             <Text style={styles.mutedSmall}>
@@ -87,10 +97,7 @@ export default function ProfileScreen({ me, baseAvailability, skillLevel, onSkil
           </View>
         ) : (
           <View>
-            <View style={styles.stepperValue}>
-              <Text style={styles.stepperValueText}>{skillLevel.toFixed(1)}</Text>
-              <Text style={styles.muted}>{skillLabelFor(skillLevel)}</Text>
-            </View>
+            <Text style={styles.muted}>{skillLabelFor(skillLevel)}</Text>
             <View style={styles.skillTrack}>
               <View style={[styles.skillFill, { width: `${skillFraction * 100}%` }]} />
             </View>
@@ -146,13 +153,6 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
     paddingBottom: spacing.xl,
   },
-  title: {
-    color: colors.text,
-    fontFamily: fonts.display,
-    fontSize: 26,
-    letterSpacing: 0.4,
-    marginBottom: spacing.md,
-  },
   card: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
@@ -161,31 +161,62 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  headerRow: {
-    flexDirection: 'row',
+  hero: {
     alignItems: 'center',
+    paddingVertical: spacing.lg,
+    marginBottom: spacing.md + 2,
+  },
+  heroAvatar: {
+    borderWidth: 3,
+    borderColor: colors.accent,
     marginBottom: spacing.md,
   },
-  avatar: {
-    width: 54,
-    height: 54,
-    borderRadius: 16,
-    backgroundColor: colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.md + 2,
-    transform: [{ rotate: '-4deg' }],
-  },
-  avatarText: {
-    color: colors.accentText,
-    fontFamily: fonts.extrabold,
-    fontSize: 18,
-    transform: [{ rotate: '4deg' }],
-  },
-  name: {
+  heroName: {
     color: colors.text,
+    fontFamily: fonts.display,
+    fontSize: 24,
+    letterSpacing: 0.3,
+  },
+  heroBio: {
+    color: colors.textMuted,
+    fontFamily: fonts.regular,
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: 'center',
+    marginTop: spacing.sm,
+    marginBottom: spacing.lg,
+    maxWidth: 280,
+  },
+  statRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: spacing.md,
+    width: '100%',
+  },
+  statCell: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  statDivider: {
+    width: 1,
+    alignSelf: 'stretch',
+    backgroundColor: colors.border,
+  },
+  statValue: {
+    color: colors.accent,
+    fontFamily: fonts.display,
+    fontSize: 20,
+  },
+  statLabel: {
+    color: colors.textFaint,
     fontFamily: fonts.bold,
-    fontSize: 18,
+    fontSize: 10,
+    letterSpacing: 0.5,
+    marginTop: 2,
   },
   homeCourtRow: {
     flexDirection: 'row',
@@ -204,26 +235,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginBottom: spacing.md,
   },
-  bio: {
-    color: colors.text,
-    fontFamily: fonts.regular,
-    fontSize: 13,
-    lineHeight: 18,
-  },
   sectionTitle: {
     color: colors.text,
     fontFamily: fonts.bold,
     fontSize: 15,
     marginBottom: spacing.md,
-  },
-  stepperValue: {
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  stepperValueText: {
-    color: colors.text,
-    fontFamily: fonts.display,
-    fontSize: 28,
   },
   skillTrack: {
     height: 6,

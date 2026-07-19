@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { players } from '../data/mockData';
 import { Player } from '../data/types';
 import { casualLadder, competitiveLadder, LadderRow } from '../logic/ladder';
+import Avatar from '../components/Avatar';
 import { colors, fonts, radius, spacing } from '../theme';
 
 type LadderMode = 'competitive' | 'casual';
@@ -12,26 +13,56 @@ interface Props {
   me: Player;
 }
 
-const rankColors: Record<number, string> = {
-  1: '#FFC94D',
+const podiumColors: Record<1 | 2 | 3, string> = {
+  1: colors.accent,
   2: '#C9CCD1',
   3: '#D08A52',
 };
 
+const podiumHeights: Record<1 | 2 | 3, number> = {
+  1: 76,
+  2: 54,
+  3: 40,
+};
+
+const podiumAvatarSizes: Record<1 | 2 | 3, number> = {
+  1: 60,
+  2: 48,
+  3: 46,
+};
+
+function statFor(row: LadderRow, mode: LadderMode) {
+  return mode === 'competitive' ? row.player.competitiveElo : row.player.casualGamesPlayed;
+}
+
+function PodiumBlock({ row, mode, place }: { row: LadderRow; mode: LadderMode; place: 1 | 2 | 3 }) {
+  return (
+    <View style={[styles.podiumBlock, place === 1 && styles.podiumBlockFirst]}>
+      <Ionicons name="trophy" size={14} color={podiumColors[place]} style={styles.podiumTrophy} />
+      <Avatar
+        playerId={row.player.id}
+        size={podiumAvatarSizes[place]}
+        style={[styles.podiumAvatar, row.isMe && { borderColor: colors.accent, borderWidth: 2 }]}
+      />
+      <Text style={styles.podiumName} numberOfLines={1}>
+        {row.isMe ? 'You' : row.player.name.split(' ')[0]}
+      </Text>
+      <Text style={styles.podiumStat}>
+        {statFor(row, mode)}
+        <Text style={styles.podiumStatUnit}>{mode === 'competitive' ? '' : ' gm'}</Text>
+      </Text>
+      <View style={[styles.riser, { height: podiumHeights[place], backgroundColor: podiumColors[place] }]}>
+        <Text style={styles.riserText}>{place}</Text>
+      </View>
+    </View>
+  );
+}
+
 function LadderRowItem({ row, mode }: { row: LadderRow; mode: LadderMode }) {
-  const medalColor = rankColors[row.rank];
   return (
     <View style={[styles.row, row.isMe && styles.rowMe]}>
-      <View style={styles.rankWrap}>
-        {medalColor ? (
-          <Ionicons name="trophy" size={18} color={medalColor} />
-        ) : (
-          <Text style={styles.rankText}>{row.rank}</Text>
-        )}
-      </View>
-      <View style={styles.avatar}>
-        <Text style={styles.avatarText}>{row.player.initials}</Text>
-      </View>
+      <Text style={styles.rankText}>{row.rank}</Text>
+      <Avatar playerId={row.player.id} size={38} style={styles.avatar} />
       <View style={styles.nameWrap}>
         <Text style={styles.name}>
           {row.player.name}
@@ -40,17 +71,8 @@ function LadderRowItem({ row, mode }: { row: LadderRow; mode: LadderMode }) {
         <Text style={styles.subtitle}>{row.player.skillLabel}</Text>
       </View>
       <View style={styles.statWrap}>
-        {mode === 'competitive' ? (
-          <>
-            <Text style={styles.statValue}>{row.player.competitiveElo}</Text>
-            <Text style={styles.statUnit}>ELO</Text>
-          </>
-        ) : (
-          <>
-            <Text style={styles.statValue}>{row.player.casualGamesPlayed}</Text>
-            <Text style={styles.statUnit}>games</Text>
-          </>
-        )}
+        <Text style={styles.statValue}>{statFor(row, mode)}</Text>
+        <Text style={styles.statUnit}>{mode === 'competitive' ? 'ELO' : 'games'}</Text>
       </View>
     </View>
   );
@@ -63,6 +85,10 @@ export default function LaddersScreen({ me }: Props) {
     () => (mode === 'competitive' ? competitiveLadder(me, players) : casualLadder(me, players)),
     [mode, me, players]
   );
+
+  const podium = rows.slice(0, 3);
+  const rest = rows.slice(3);
+  const [first, second, third] = podium;
 
   return (
     <View style={styles.container}>
@@ -100,8 +126,16 @@ export default function LaddersScreen({ me }: Props) {
         </Pressable>
       </View>
 
+      {podium.length === 3 && (
+        <View style={styles.podiumRow}>
+          <PodiumBlock row={second} mode={mode} place={2} />
+          <PodiumBlock row={first} mode={mode} place={1} />
+          <PodiumBlock row={third} mode={mode} place={3} />
+        </View>
+      )}
+
       <FlatList
-        data={rows}
+        data={rest}
         keyExtractor={(item) => item.player.id}
         renderItem={({ item }) => <LadderRowItem row={item} mode={mode} />}
         contentContainerStyle={styles.list}
@@ -139,7 +173,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     padding: 4,
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
   },
   segment: {
     flex: 1,
@@ -161,6 +195,56 @@ const styles = StyleSheet.create({
   segmentTextActive: {
     color: colors.accentText,
   },
+  podiumRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    gap: 10,
+    marginBottom: spacing.lg,
+  },
+  podiumBlock: {
+    flex: 1,
+    alignItems: 'center',
+    maxWidth: 120,
+  },
+  podiumBlockFirst: {
+    marginBottom: 10,
+  },
+  podiumTrophy: {
+    marginBottom: 4,
+  },
+  podiumAvatar: {
+    marginBottom: 6,
+  },
+  podiumName: {
+    color: colors.text,
+    fontFamily: fonts.bold,
+    fontSize: 12.5,
+    marginBottom: 2,
+  },
+  podiumStat: {
+    color: colors.accent,
+    fontFamily: fonts.display,
+    fontSize: 15,
+    marginBottom: 8,
+  },
+  podiumStatUnit: {
+    fontFamily: fonts.bold,
+    fontSize: 9,
+  },
+  riser: {
+    width: '100%',
+    borderTopLeftRadius: radius.sm,
+    borderTopRightRadius: radius.sm,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    paddingTop: 6,
+  },
+  riserText: {
+    color: colors.accentText,
+    fontFamily: fonts.extrabold,
+    fontSize: 16,
+  },
   list: {
     paddingBottom: 24,
   },
@@ -178,31 +262,15 @@ const styles = StyleSheet.create({
     borderColor: colors.accent,
     backgroundColor: colors.accentMuted,
   },
-  rankWrap: {
-    width: 26,
-    alignItems: 'center',
-    marginRight: spacing.sm,
-  },
   rankText: {
+    width: 26,
     color: colors.textMuted,
     fontFamily: fonts.bold,
     fontSize: 14,
+    marginRight: spacing.sm,
   },
   avatar: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
     marginRight: spacing.md,
-    transform: [{ rotate: '-4deg' }],
-  },
-  avatarText: {
-    color: colors.accentText,
-    fontFamily: fonts.extrabold,
-    fontSize: 13,
-    transform: [{ rotate: '4deg' }],
   },
   nameWrap: {
     flex: 1,

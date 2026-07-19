@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { players } from '../data/mockData';
 import { Community, Player } from '../data/types';
+import Avatar from '../components/Avatar';
 import PressScale from '../components/PressScale';
 import { colors, fonts, radius, shadow, spacing } from '../theme';
 
@@ -75,9 +76,7 @@ export default function CommunityDetailScreen({ community, me, isJoined, onToggl
         <View style={styles.card}>
           {members.map((member, index) => (
             <View key={member.id} style={[styles.memberRow, index === members.length - 1 && styles.memberRowLast]}>
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>{member.initials}</Text>
-              </View>
+              <Avatar playerId={member.id} size={34} style={styles.avatar} />
               <View style={styles.memberText}>
                 <Text style={styles.memberName}>{member.name}</Text>
                 <Text style={styles.memberSkill}>{member.skillLabel}</Text>
@@ -100,9 +99,7 @@ export default function CommunityDetailScreen({ community, me, isJoined, onToggl
                 ]}
               >
                 <Text style={styles.rankText}>{index + 1}</Text>
-                <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>{player.initials}</Text>
-                </View>
+                <Avatar playerId={player.id} size={34} style={styles.avatar} />
                 <View style={styles.memberText}>
                   <Text style={styles.memberName}>
                     {player.name}
@@ -252,20 +249,7 @@ const styles = StyleSheet.create({
     width: 16,
   },
   avatar: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    backgroundColor: colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
     marginRight: spacing.md,
-    transform: [{ rotate: '-4deg' }],
-  },
-  avatarText: {
-    color: colors.accentText,
-    fontFamily: fonts.extrabold,
-    fontSize: 12,
-    transform: [{ rotate: '4deg' }],
   },
   memberText: {
     flex: 1,
