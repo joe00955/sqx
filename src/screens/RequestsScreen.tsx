@@ -43,7 +43,7 @@ function RequestCard({ request, onRespond }: { request: IncomingRequest; onRespo
       </View>
 
       <View style={styles.bookingBox}>
-        <Ionicons name="tennisball-outline" size={16} color={colors.accent} style={styles.bookingIcon} />
+        <Ionicons name="time-outline" size={16} color={colors.accent} style={styles.bookingIcon} />
         <Text style={styles.bookingDetail}>
           {request.day} {request.start}–{request.end} · {court.name}
         </Text>

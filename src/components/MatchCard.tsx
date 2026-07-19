@@ -59,7 +59,7 @@ export default function MatchCard({ match }: Props) {
       {best ? (
         <View style={styles.bookingBox}>
           <View style={styles.bookingAccent} />
-          <Ionicons name="tennisball-outline" size={18} color={colors.accent} style={styles.bookingIcon} />
+          <Ionicons name="time-outline" size={18} color={colors.accent} style={styles.bookingIcon} />
           <View style={styles.bookingTextWrap}>
             <Text style={styles.bookingLabel}>Suggested game</Text>
             <Text style={styles.bookingDetail}>

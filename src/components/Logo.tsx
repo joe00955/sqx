@@ -1,23 +1,31 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, fonts } from '../theme';
 
 interface Props {
   size?: 'sm' | 'lg';
+  suffix?: string;
+  onPress?: () => void;
 }
 
-export default function Logo({ size = 'sm' }: Props) {
+export default function Logo({ size = 'sm', suffix = 'RALLY', onPress }: Props) {
   const badgeSize = size === 'lg' ? 44 : 30;
-  return (
+  const content = (
     <View style={styles.row}>
       <View style={[styles.badge, { width: badgeSize, height: badgeSize }]}>
         <Text style={[styles.badgeText, size === 'lg' && styles.badgeTextLg]}>X</Text>
       </View>
       <Text style={[styles.wordmark, size === 'lg' && styles.wordmarkLg]}>
-        SQUASH<Text style={styles.wordmarkAccent}>X</Text> RALLY
+        SQUASH<Text style={styles.wordmarkAccent}>X</Text>
+        {suffix ? ` ${suffix}` : ''}
       </Text>
     </View>
   );
+
+  if (onPress) {
+    return <Pressable onPress={onPress}>{content}</Pressable>;
+  }
+  return content;
 }
 
 const styles = StyleSheet.create({

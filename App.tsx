@@ -18,6 +18,7 @@ import CommunityDetailScreen from './src/screens/CommunityDetailScreen';
 import LaddersScreen from './src/screens/LaddersScreen';
 import RequestsScreen from './src/screens/RequestsScreen';
 import OnboardingScreen from './src/screens/OnboardingScreen';
+import SquashXHomeScreen from './src/screens/SquashXHomeScreen';
 import Logo from './src/components/Logo';
 import AccentMotif from './src/components/AccentMotif';
 import FadeIn from './src/components/FadeIn';
@@ -59,6 +60,7 @@ export default function App() {
   const { width } = useWindowDimensions();
   const isWide = width >= WIDE_BREAKPOINT;
 
+  const [view, setView] = useState<'hub' | 'rally'>('hub');
   const [onboarded, setOnboarded] = useState(false);
   const [tab, setTab] = useState<Tab>('browse');
   const [selectedCommunityId, setSelectedCommunityId] = useState<string | null>(null);
@@ -132,6 +134,15 @@ export default function App() {
     );
   }
 
+  if (view === 'hub') {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <StatusBar barStyle="light-content" backgroundColor={colors.background} />
+        <SquashXHomeScreen onEnterRally={() => setView('rally')} />
+      </SafeAreaView>
+    );
+  }
+
   if (!onboarded) {
     return (
       <SafeAreaView style={styles.safeArea}>
@@ -183,7 +194,7 @@ export default function App() {
           <LinearGradient colors={gradients.glow} style={styles.sidebar}>
             <AccentMotif style={styles.sidebarMotif} />
             <View style={styles.sidebarLogoWrap}>
-              <Logo />
+              <Logo onPress={() => setView('hub')} />
             </View>
             {tabs.map((t) => {
               const active = t.key === tab;
@@ -223,7 +234,7 @@ export default function App() {
 
       <LinearGradient colors={gradients.glow} style={styles.header}>
         <AccentMotif style={styles.headerMotif} />
-        <Logo />
+        <Logo onPress={() => setView('hub')} />
       </LinearGradient>
 
       <FadeIn key={contentKey} style={styles.content}>
