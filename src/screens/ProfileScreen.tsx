@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Court, Player, TimeSlot, VerificationStatus } from '../data/types';
+import { Court, Player, SubscriptionStatus, TimeSlot, VerificationStatus } from '../data/types';
 import { skillLabelFor } from '../logic/skill';
 import { computeSkillLevel, skillQuizQuestions } from '../logic/skillQuiz';
 import { slotKey } from '../logic/slotKey';
@@ -23,6 +23,9 @@ interface Props {
   verificationStatus?: VerificationStatus;
   onUploadAvatar?: (file: File) => Promise<string | null>;
   onUploadVerificationVideo?: (file: File) => Promise<boolean>;
+  subscriptionStatus?: SubscriptionStatus;
+  checkoutUrl?: string | null;
+  portalUrl?: string | null;
 }
 
 const MIN_SKILL = 1;
@@ -40,6 +43,9 @@ export default function ProfileScreen({
   verificationStatus,
   onUploadAvatar,
   onUploadVerificationVideo,
+  subscriptionStatus,
+  checkoutUrl,
+  portalUrl,
 }: Props) {
   const homeCourt = courts.find((c) => c.id === me.homeCourtId);
   const skillFraction = (skillLevel - MIN_SKILL) / (MAX_SKILL - MIN_SKILL);
@@ -249,6 +255,47 @@ export default function ProfileScreen({
                 style={{ display: 'none' }}
                 onChange={handleVideoSelected}
               />
+            </View>
+          )}
+        </View>
+      )}
+
+      {subscriptionStatus && (
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Competitive access</Text>
+          {subscriptionStatus === 'active' ? (
+            <View>
+              <View style={styles.verifiedRow}>
+                <Ionicons name="checkmark-circle" size={18} color={colors.success} />
+                <Text style={styles.verifiedRowText}>
+                  You're subscribed — competitive requests and ELO are unlocked.
+                </Text>
+              </View>
+              <PressScale
+                style={styles.manageButton}
+                onPress={() => portalUrl && Linking.openURL(portalUrl)}
+                disabled={!portalUrl}
+              >
+                <Text style={styles.manageButtonText}>Manage subscription</Text>
+              </PressScale>
+            </View>
+          ) : (
+            <View>
+              <Text style={styles.mutedSmall}>
+                {subscriptionStatus === 'canceled'
+                  ? 'Your subscription was canceled. Resubscribe to send and accept competitive requests and climb the ELO ladder.'
+                  : 'Casual matches are free. Unlock competitive requests and ELO ladder climbing for €4.99/month.'}
+              </Text>
+              <PressScale
+                style={styles.verifyButton}
+                onPress={() => checkoutUrl && Linking.openURL(checkoutUrl)}
+                disabled={!checkoutUrl}
+              >
+                <Ionicons name="podium-outline" size={16} color={colors.accentText} />
+                <Text style={styles.verifyButtonText}>
+                  {subscriptionStatus === 'canceled' ? 'Resubscribe' : 'Upgrade to Competitive'}
+                </Text>
+              </PressScale>
             </View>
           )}
         </View>
@@ -507,6 +554,20 @@ const styles = StyleSheet.create({
   },
   verifyButtonText: {
     color: colors.accentText,
+    fontFamily: fonts.bold,
+    fontSize: 13.5,
+  },
+  manageButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: 12,
+    marginTop: spacing.sm,
+  },
+  manageButtonText: {
+    color: colors.text,
     fontFamily: fonts.bold,
     fontSize: 13.5,
   },

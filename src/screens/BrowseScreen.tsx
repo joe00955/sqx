@@ -6,6 +6,7 @@ import { findMatches, MatchResult, SuggestedBooking } from '../logic/matching';
 import SwipeCard from '../components/SwipeCard';
 import PressScale from '../components/PressScale';
 import SafetyMenu from '../components/SafetyMenu';
+import UpgradeModal from '../components/UpgradeModal';
 import { colors, fonts, radius, spacing } from '../theme';
 
 type SortMode = 'best' | 'closest' | 'skill' | 'availability';
@@ -41,13 +42,25 @@ interface Props {
   onSendRequest?: (player: Player, mode: MatchMode, booking: SuggestedBooking) => void;
   onBlockPlayer?: (playerId: string) => void;
   onReportPlayer?: (playerId: string, reason: string, details: string) => void;
+  isSubscribed?: boolean;
+  checkoutUrl?: string | null;
 }
 
-export default function BrowseScreen({ me, players, courts, onSendRequest, onBlockPlayer, onReportPlayer }: Props) {
+export default function BrowseScreen({
+  me,
+  players,
+  courts,
+  onSendRequest,
+  onBlockPlayer,
+  onReportPlayer,
+  isSubscribed = true,
+  checkoutUrl = null,
+}: Props) {
   const [sortMode, setSortMode] = useState<SortMode>('best');
   const [mode, setMode] = useState<MatchMode>('casual');
   const [dismissed, setDismissed] = useState<Record<string, boolean>>({});
   const [safetyTarget, setSafetyTarget] = useState<Player | null>(null);
+  const [upgradeVisible, setUpgradeVisible] = useState(false);
 
   const allMatches = useMemo(() => findMatches(me, players, courts), [me, players, courts]);
   const sorted = useMemo(() => sortMatches(allMatches, sortMode), [allMatches, sortMode]);
@@ -109,7 +122,7 @@ export default function BrowseScreen({ me, players, courts, onSendRequest, onBlo
         </Pressable>
         <Pressable
           style={[styles.modeChip, mode === 'competitive' && styles.modeChipActive]}
-          onPress={() => setMode('competitive')}
+          onPress={() => (isSubscribed ? setMode('competitive') : setUpgradeVisible(true))}
         >
           <Ionicons name="podium-outline" size={13} color={mode === 'competitive' ? colors.accentText : colors.textMuted} />
           <Text style={[styles.modeText, mode === 'competitive' && styles.modeTextActive]}>Competitive · affects ELO</Text>
@@ -174,6 +187,8 @@ export default function BrowseScreen({ me, players, courts, onSendRequest, onBlo
         onBlock={handleBlock}
         onReport={handleReport}
       />
+
+      <UpgradeModal visible={upgradeVisible} checkoutUrl={checkoutUrl} onClose={() => setUpgradeVisible(false)} />
     </View>
   );
 }

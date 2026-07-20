@@ -1,5 +1,6 @@
 export type Day = 'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat' | 'Sun';
 export type VerificationStatus = 'unverified' | 'pending' | 'verified' | 'rejected';
+export type SubscriptionStatus = 'inactive' | 'active' | 'canceled';
 
 export interface TimeSlot {
   day: Day;

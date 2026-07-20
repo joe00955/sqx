@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Image, Platform, Pressable, SafeAreaView, StatusBar, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, Image, Modal, Platform, Pressable, SafeAreaView, StatusBar, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFonts as useAnton, Anton_400Regular } from '@expo-google-fonts/anton';
@@ -35,6 +35,7 @@ import { skillLabelFor } from './src/logic/skill';
 import { slotKey } from './src/logic/slotKey';
 import { colors, fonts, gradients, radius, spacing } from './src/theme';
 import { isSupabaseConfigured } from './src/lib/supabase';
+import { buildCheckoutUrl, portalLoginUrl } from './src/lib/stripe';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { useCourts } from './src/hooks/useCourts';
 import { useProfile } from './src/hooks/useProfile';
@@ -193,6 +194,8 @@ function AppShell() {
   } = useMatchRequests(userId);
   const verification = useVerification(userId);
   const isAdmin = isSupabaseConfigured && profile.isAdmin;
+  const isSubscribed = isSupabaseConfigured ? profile.subscriptionStatus === 'active' : true;
+  const checkoutUrl = isSupabaseConfigured && userId ? buildCheckoutUrl(userId, session?.user?.email) : null;
   const adminVerifications = useAdminVerifications(isAdmin);
   const adminReports = useAdminReports(isAdmin);
   const adminModeration = useAdminModeration();
@@ -228,6 +231,20 @@ function AppShell() {
     profile.updateLocation(myLocation.latitude, myLocation.longitude);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, myLocation]);
+
+  const [upgradeSuccess, setUpgradeSuccess] = useState(false);
+
+  useEffect(() => {
+    if (!isWeb) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('upgraded') !== '1') return;
+    params.delete('upgraded');
+    const search = params.toString();
+    window.history.replaceState({}, '', window.location.pathname + (search ? `?${search}` : ''));
+    setUpgradeSuccess(true);
+    if (isSupabaseConfigured) profile.refetch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const toggleSlot = (key: string) => {
     if (isSupabaseConfigured) {
@@ -416,6 +433,8 @@ function AppShell() {
         onSendRequest={(player, mode, booking) => sendRequest({ toUserId: player.id, mode, booking })}
         onBlockPlayer={blockUser}
         onReportPlayer={reportUser}
+        isSubscribed={isSubscribed}
+        checkoutUrl={checkoutUrl}
       />
     ) : tab === 'requests' ? (
       <RequestsScreen
@@ -453,7 +472,7 @@ function AppShell() {
         />
       )
     ) : tab === 'ladders' ? (
-      <LaddersScreen me={me} players={livePlayers} />
+      <LaddersScreen me={me} players={livePlayers} isSubscribed={isSubscribed} checkoutUrl={checkoutUrl} />
     ) : tab === 'admin' ? (
       <AdminScreen
         pending={adminVerifications.pending}
@@ -480,6 +499,9 @@ function AppShell() {
         verificationStatus={isSupabaseConfigured ? profile.verificationStatus : undefined}
         onUploadAvatar={isSupabaseConfigured ? handleUploadAvatar : undefined}
         onUploadVerificationVideo={isSupabaseConfigured ? handleUploadVerificationVideo : undefined}
+        subscriptionStatus={isSupabaseConfigured ? profile.subscriptionStatus : undefined}
+        checkoutUrl={checkoutUrl}
+        portalUrl={portalLoginUrl()}
       />
     );
 
@@ -526,6 +548,20 @@ function AppShell() {
         {isSupabaseConfigured && (
           <WarningModal message={profile.warningMessage} onAcknowledge={profile.acknowledgeWarning} />
         )}
+        <Modal visible={upgradeSuccess} transparent animationType="fade" onRequestClose={() => setUpgradeSuccess(false)}>
+          <View style={styles.upgradeSuccessBackdrop}>
+            <View style={styles.upgradeSuccessSheet}>
+              <Ionicons name="checkmark-circle" size={28} color={colors.success} />
+              <Text style={styles.upgradeSuccessTitle}>You're all set</Text>
+              <Text style={styles.upgradeSuccessMessage}>
+                Competitive matching and the ELO ladder are unlocked. Good luck out there.
+              </Text>
+              <Pressable style={styles.upgradeSuccessButton} onPress={() => setUpgradeSuccess(false)}>
+                <Text style={styles.upgradeSuccessButtonText}>Nice</Text>
+              </Pressable>
+            </View>
+          </View>
+        </Modal>
       </SafeAreaView>
     );
   }
@@ -566,6 +602,20 @@ function AppShell() {
       {isSupabaseConfigured && (
         <WarningModal message={profile.warningMessage} onAcknowledge={profile.acknowledgeWarning} />
       )}
+      <Modal visible={upgradeSuccess} transparent animationType="fade" onRequestClose={() => setUpgradeSuccess(false)}>
+        <View style={styles.upgradeSuccessBackdrop}>
+          <View style={styles.upgradeSuccessSheet}>
+            <Ionicons name="checkmark-circle" size={28} color={colors.success} />
+            <Text style={styles.upgradeSuccessTitle}>You're all set</Text>
+            <Text style={styles.upgradeSuccessMessage}>
+              Competitive matching and the ELO ladder are unlocked. Good luck out there.
+            </Text>
+            <Pressable style={styles.upgradeSuccessButton} onPress={() => setUpgradeSuccess(false)}>
+              <Text style={styles.upgradeSuccessButtonText}>Nice</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -706,5 +756,47 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
     maxWidth: MAX_CONTENT_WIDTH,
+  },
+  upgradeSuccessBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.lg,
+  },
+  upgradeSuccessSheet: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.lg,
+    maxWidth: 380,
+    width: '100%',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  upgradeSuccessTitle: {
+    color: colors.text,
+    fontFamily: fonts.bold,
+    fontSize: 16,
+  },
+  upgradeSuccessMessage: {
+    color: colors.textMuted,
+    fontFamily: fonts.medium,
+    fontSize: 13.5,
+    textAlign: 'center',
+    lineHeight: 19,
+    marginBottom: spacing.sm,
+  },
+  upgradeSuccessButton: {
+    backgroundColor: colors.accent,
+    borderRadius: radius.sm,
+    paddingVertical: 12,
+    paddingHorizontal: spacing.xl,
+  },
+  upgradeSuccessButtonText: {
+    color: colors.accentText,
+    fontFamily: fonts.bold,
+    fontSize: 14,
   },
 });

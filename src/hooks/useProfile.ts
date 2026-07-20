@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { Day, TimeSlot, VerificationStatus } from '../data/types';
+import { Day, SubscriptionStatus, TimeSlot, VerificationStatus } from '../data/types';
 import { slotKey } from '../logic/slotKey';
 
 interface ProfileRow {
@@ -16,6 +16,7 @@ interface ProfileRow {
   banned: boolean;
   ban_reason: string | null;
   warning_message: string | null;
+  subscription_status: SubscriptionStatus;
 }
 
 interface AvailabilityRow {
@@ -42,6 +43,7 @@ interface ProfileState {
   banned: boolean;
   banReason: string | null;
   warningMessage: string | null;
+  subscriptionStatus: SubscriptionStatus;
 }
 
 const EMPTY: ProfileState = {
@@ -61,6 +63,7 @@ const EMPTY: ProfileState = {
   banned: false,
   banReason: null,
   warningMessage: null,
+  subscriptionStatus: 'inactive',
 };
 
 const toHm = (time: string) => time.slice(0, 5);
@@ -79,7 +82,7 @@ export function useProfile(userId: string | null) {
       supabase
         .from('profiles')
         .select(
-          'name, bio, skill_level, home_court_id, competitive_elo, casual_games_played, avatar_url, verification_status, is_admin, banned, ban_reason, warning_message'
+          'name, bio, skill_level, home_court_id, competitive_elo, casual_games_played, avatar_url, verification_status, is_admin, banned, ban_reason, warning_message, subscription_status'
         )
         .eq('id', userId)
         .maybeSingle(),
@@ -119,6 +122,7 @@ export function useProfile(userId: string | null) {
       banned: p.banned,
       banReason: p.ban_reason,
       warningMessage: p.warning_message,
+      subscriptionStatus: p.subscription_status,
     });
   }, [userId]);
 

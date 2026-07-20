@@ -41,6 +41,10 @@ create table if not exists profiles (
   ban_reason text,
   warning_message text,
   warned_at timestamptz,
+  subscription_status text not null default 'inactive'
+    check (subscription_status in ('inactive', 'active', 'canceled')),
+  stripe_customer_id text,
+  stripe_subscription_id text,
   created_at timestamptz not null default now()
 );
 
@@ -127,6 +131,15 @@ as $$
   select coalesce((select banned from profiles where id = uid), false);
 $$;
 
+create or replace function public.is_subscribed(uid uuid)
+returns boolean
+language sql
+security definer
+stable
+as $$
+  select coalesce((select subscription_status = 'active' from profiles where id = uid), false);
+$$;
+
 -- Availability: readable by anyone signed in (needed for matching), writable only by the owner
 create policy "availability is viewable by authenticated users" on availability_slots
   for select using (auth.role() = 'authenticated');
@@ -145,9 +158,18 @@ create policy "users can leave communities" on community_members
 create policy "involved users can view a request" on match_requests
   for select using (auth.uid() = from_user_id or auth.uid() = to_user_id);
 create policy "senders can create a request" on match_requests
-  for insert with check (auth.uid() = from_user_id and not public.is_banned(auth.uid()));
+  for insert with check (
+    auth.uid() = from_user_id
+    and not public.is_banned(auth.uid())
+    and (mode = 'casual' or public.is_subscribed(auth.uid()))
+  );
 create policy "recipients can respond to a request" on match_requests
-  for update using (auth.uid() = to_user_id);
+  for update
+  using (auth.uid() = to_user_id)
+  with check (
+    auth.uid() = to_user_id
+    and (status <> 'accepted' or mode = 'casual' or public.is_subscribed(auth.uid()))
+  );
 
 -- ── Safety: blocking + reporting ─────────────────────────────────────
 create table if not exists blocked_users (

@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Player } from '../data/types';
 import { casualLadder, competitiveLadder, LadderRow } from '../logic/ladder';
 import Avatar from '../components/Avatar';
+import UpgradeModal from '../components/UpgradeModal';
 import { colors, fonts, radius, spacing } from '../theme';
 
 type LadderMode = 'competitive' | 'casual';
@@ -11,6 +12,8 @@ type LadderMode = 'competitive' | 'casual';
 interface Props {
   me: Player;
   players: Player[];
+  isSubscribed?: boolean;
+  checkoutUrl?: string | null;
 }
 
 const podiumColors: Record<1 | 2 | 3, string> = {
@@ -78,8 +81,9 @@ function LadderRowItem({ row, mode }: { row: LadderRow; mode: LadderMode }) {
   );
 }
 
-export default function LaddersScreen({ me, players }: Props) {
+export default function LaddersScreen({ me, players, isSubscribed = true, checkoutUrl = null }: Props) {
   const [mode, setMode] = useState<LadderMode>('competitive');
+  const [upgradeVisible, setUpgradeVisible] = useState(false);
 
   const rows = useMemo(
     () => (mode === 'competitive' ? competitiveLadder(me, players) : casualLadder(me, players)),
@@ -126,6 +130,16 @@ export default function LaddersScreen({ me, players }: Props) {
         </Pressable>
       </View>
 
+      {mode === 'competitive' && !isSubscribed && (
+        <Pressable style={styles.upsellBanner} onPress={() => setUpgradeVisible(true)}>
+          <Ionicons name="lock-closed" size={15} color={colors.accent} />
+          <Text style={styles.upsellText}>
+            You can see the ladder, but you'll need Competitive to climb it.
+          </Text>
+          <Text style={styles.upsellCta}>Upgrade</Text>
+        </Pressable>
+      )}
+
       {podium.length === 3 && (
         <View style={styles.podiumRow}>
           <PodiumBlock row={second} mode={mode} place={2} />
@@ -141,6 +155,8 @@ export default function LaddersScreen({ me, players }: Props) {
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
       />
+
+      <UpgradeModal visible={upgradeVisible} checkoutUrl={checkoutUrl} onClose={() => setUpgradeVisible(false)} />
     </View>
   );
 }
@@ -194,6 +210,29 @@ const styles = StyleSheet.create({
   },
   segmentTextActive: {
     color: colors.accentText,
+  },
+  upsellBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.accentMuted,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.accent,
+    paddingVertical: 10,
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  upsellText: {
+    flex: 1,
+    color: colors.text,
+    fontFamily: fonts.medium,
+    fontSize: 12,
+  },
+  upsellCta: {
+    color: colors.accent,
+    fontFamily: fonts.bold,
+    fontSize: 12.5,
   },
   podiumRow: {
     flexDirection: 'row',
