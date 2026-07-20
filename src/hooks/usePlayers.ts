@@ -64,7 +64,8 @@ export function usePlayers(currentUserId: string | null, myLocation?: Coords | n
         .from('profiles')
         .select(
           'id, name, bio, skill_level, home_court_id, competitive_elo, casual_games_played, latitude, longitude, contact_email, avatar_url, verification_status'
-        );
+        )
+        .eq('banned', false);
       if (currentUserId) {
         profilesQuery = profilesQuery.neq('id', currentUserId);
       }

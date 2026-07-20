@@ -22,7 +22,10 @@ import SquashXHomeScreen from './src/screens/SquashXHomeScreen';
 import LegalScreen from './src/screens/LegalScreen';
 import AuthScreen from './src/screens/AuthScreen';
 import AdminScreen from './src/screens/AdminScreen';
+import BannedScreen from './src/screens/BannedScreen';
+import WarningModal from './src/components/WarningModal';
 import ChatScreen from './src/screens/ChatScreen';
+import MessagesScreen from './src/screens/MessagesScreen';
 import Logo from './src/components/Logo';
 import AccentMotif from './src/components/AccentMotif';
 import FadeIn from './src/components/FadeIn';
@@ -44,12 +47,15 @@ import { useVerification } from './src/hooks/useVerification';
 import { useAdminVerifications } from './src/hooks/useAdminVerifications';
 import { useMessages } from './src/hooks/useMessages';
 import { useAdminReports } from './src/hooks/useAdminReports';
+import { useAdminModeration } from './src/hooks/useAdminModeration';
+import { useConversations } from './src/hooks/useConversations';
 
-type Tab = 'browse' | 'requests' | 'communities' | 'ladders' | 'profile' | 'admin';
+type Tab = 'browse' | 'requests' | 'messages' | 'communities' | 'ladders' | 'profile' | 'admin';
 
 const baseTabs: { key: Tab; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
   { key: 'browse', label: 'Browse', icon: 'search-outline' },
   { key: 'requests', label: 'Requests', icon: 'mail-outline' },
+  { key: 'messages', label: 'Messages', icon: 'chatbubble-ellipses-outline' },
   { key: 'communities', label: 'Communities', icon: 'people-outline' },
   { key: 'ladders', label: 'Ladders', icon: 'podium-outline' },
   { key: 'profile', label: 'Profile', icon: 'person-outline' },
@@ -84,6 +90,8 @@ function routeForPath(pathname: string): Route {
   switch (pathname.replace(/\/+$/, '') || '/') {
     case '/requests':
       return { view: 'rally', tab: 'requests' };
+    case '/messages':
+      return { view: 'rally', tab: 'messages' };
     case '/communities':
       return { view: 'rally', tab: 'communities' };
     case '/ladders':
@@ -187,6 +195,7 @@ function AppShell() {
   const isAdmin = isSupabaseConfigured && profile.isAdmin;
   const adminVerifications = useAdminVerifications(isAdmin);
   const adminReports = useAdminReports(isAdmin);
+  const adminModeration = useAdminModeration();
   const visibleTabs = isAdmin ? [...baseTabs, adminTab] : baseTabs;
 
   const myId = isSupabaseConfigured ? userId : 'me';
@@ -195,6 +204,12 @@ function AppShell() {
     : null;
   const chatPlayer = chatRequest ? livePlayers.find((p) => p.id === chatRequest.playerId) ?? null : null;
   const chatMessages = useMessages(chatRequestId, myId);
+
+  const acceptedRequests = useMemo(
+    () => [...incomingRequests, ...outgoingRequests].filter((r) => r.status === 'accepted'),
+    [incomingRequests, outgoingRequests]
+  );
+  const { conversations, loading: conversationsLoading } = useConversations(acceptedRequests);
 
   const handleUploadAvatar = async (file: File) => {
     const url = await verification.uploadAvatar(file);
@@ -367,6 +382,15 @@ function AppShell() {
     );
   }
 
+  if (isSupabaseConfigured && profile.banned) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <StatusBar barStyle="light-content" backgroundColor={colors.background} />
+        <BannedScreen reason={profile.banReason} onSignOut={signOut} />
+      </SafeAreaView>
+    );
+  }
+
   const selectedCommunity = selectedCommunityId ? liveCommunities.find((c) => c.id === selectedCommunityId) : null;
 
   const activeScreen =
@@ -403,6 +427,13 @@ function AppShell() {
         onRespond={respondToRequest}
         onOpenChat={setChatRequestId}
       />
+    ) : tab === 'messages' ? (
+      <MessagesScreen
+        conversations={conversations}
+        players={livePlayers}
+        loading={conversationsLoading}
+        onOpenChat={setChatRequestId}
+      />
     ) : tab === 'communities' ? (
       selectedCommunity ? (
         <CommunityDetailScreen
@@ -432,6 +463,9 @@ function AppShell() {
         onReject={adminVerifications.reject}
         reports={adminReports.reports}
         reportsLoading={adminReports.loading}
+        moderationError={adminModeration.error}
+        onBan={adminModeration.banUser}
+        onWarn={adminModeration.warnUser}
       />
     ) : (
       <ProfileScreen
@@ -489,6 +523,9 @@ function AppShell() {
             </FadeIn>
           </View>
         </View>
+        {isSupabaseConfigured && (
+          <WarningModal message={profile.warningMessage} onAcknowledge={profile.acknowledgeWarning} />
+        )}
       </SafeAreaView>
     );
   }
@@ -526,6 +563,9 @@ function AppShell() {
           );
         })}
       </View>
+      {isSupabaseConfigured && (
+        <WarningModal message={profile.warningMessage} onAcknowledge={profile.acknowledgeWarning} />
+      )}
     </SafeAreaView>
   );
 }

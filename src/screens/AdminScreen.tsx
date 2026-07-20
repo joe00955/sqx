@@ -16,6 +16,9 @@ interface Props {
   onReject: (userId: string, videoPath: string | null) => void;
   reports: AdminReport[];
   reportsLoading: boolean;
+  moderationError: string | null;
+  onBan: (userId: string, reason: string) => void;
+  onWarn: (userId: string, message: string) => void;
 }
 
 export default function AdminScreen({
@@ -26,6 +29,9 @@ export default function AdminScreen({
   onReject,
   reports,
   reportsLoading,
+  moderationError,
+  onBan,
+  onWarn,
 }: Props) {
   const [section, setSection] = useState<Section>('verifications');
 
@@ -66,7 +72,13 @@ export default function AdminScreen({
             embedded
           />
         ) : (
-          <AdminReportsScreen reports={reports} loading={reportsLoading} />
+          <AdminReportsScreen
+            reports={reports}
+            loading={reportsLoading}
+            error={moderationError}
+            onBan={onBan}
+            onWarn={onWarn}
+          />
         )}
       </View>
     </View>

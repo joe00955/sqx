@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { ChatMessage } from '../data/types';
+import { playReceivedSound, playSentSound } from '../lib/sound';
 
 const mockThread: ChatMessage[] = [
   {
@@ -62,6 +63,7 @@ export function useMessages(matchRequestId: string | null, currentUserId: string
         { event: 'INSERT', schema: 'public', table: 'messages', filter: `match_request_id=eq.${matchRequestId}` },
         (payload) => {
           const row = payload.new as MessageRow;
+          if (row.sender_id !== currentUserId) playReceivedSound();
           setMessages((prev) => (prev.some((m) => m.id === row.id) ? prev : [...prev, fromRow(row)]));
         }
       )
@@ -71,7 +73,7 @@ export function useMessages(matchRequestId: string | null, currentUserId: string
       cancelled = true;
       supabase.removeChannel(channel);
     };
-  }, [matchRequestId]);
+  }, [matchRequestId, currentUserId]);
 
   const sendMessage = useCallback(
     async (body: string) => {
@@ -90,11 +92,15 @@ export function useMessages(matchRequestId: string | null, currentUserId: string
             createdAt: new Date().toISOString(),
           },
         ]);
+        playSentSound();
         return;
       }
 
       if (!currentUserId) return;
-      await supabase.from('messages').insert({ match_request_id: matchRequestId, sender_id: currentUserId, body: trimmed });
+      const { error } = await supabase
+        .from('messages')
+        .insert({ match_request_id: matchRequestId, sender_id: currentUserId, body: trimmed });
+      if (!error) playSentSound();
     },
     [matchRequestId, currentUserId]
   );

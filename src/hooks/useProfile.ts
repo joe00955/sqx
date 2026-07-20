@@ -13,6 +13,9 @@ interface ProfileRow {
   avatar_url: string | null;
   verification_status: VerificationStatus;
   is_admin: boolean;
+  banned: boolean;
+  ban_reason: string | null;
+  warning_message: string | null;
 }
 
 interface AvailabilityRow {
@@ -36,6 +39,9 @@ interface ProfileState {
   avatarUrl: string | null;
   verificationStatus: VerificationStatus;
   isAdmin: boolean;
+  banned: boolean;
+  banReason: string | null;
+  warningMessage: string | null;
 }
 
 const EMPTY: ProfileState = {
@@ -52,6 +58,9 @@ const EMPTY: ProfileState = {
   avatarUrl: null,
   verificationStatus: 'unverified',
   isAdmin: false,
+  banned: false,
+  banReason: null,
+  warningMessage: null,
 };
 
 const toHm = (time: string) => time.slice(0, 5);
@@ -70,7 +79,7 @@ export function useProfile(userId: string | null) {
       supabase
         .from('profiles')
         .select(
-          'name, bio, skill_level, home_court_id, competitive_elo, casual_games_played, avatar_url, verification_status, is_admin'
+          'name, bio, skill_level, home_court_id, competitive_elo, casual_games_played, avatar_url, verification_status, is_admin, banned, ban_reason, warning_message'
         )
         .eq('id', userId)
         .maybeSingle(),
@@ -107,6 +116,9 @@ export function useProfile(userId: string | null) {
       avatarUrl: p.avatar_url,
       verificationStatus: p.verification_status,
       isAdmin: p.is_admin,
+      banned: p.banned,
+      banReason: p.ban_reason,
+      warningMessage: p.warning_message,
     });
   }, [userId]);
 
@@ -181,5 +193,11 @@ export function useProfile(userId: string | null) {
     [userId]
   );
 
-  return { ...state, refetch, createProfile, updateSkillLevel, toggleSlotActive, updateLocation };
+  const acknowledgeWarning = useCallback(async () => {
+    if (!userId) return;
+    setState((prev) => ({ ...prev, warningMessage: null }));
+    await supabase.from('profiles').update({ warning_message: null, warned_at: null }).eq('id', userId);
+  }, [userId]);
+
+  return { ...state, refetch, createProfile, updateSkillLevel, toggleSlotActive, updateLocation, acknowledgeWarning };
 }

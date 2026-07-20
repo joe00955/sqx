@@ -3,11 +3,16 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AdminReport } from '../hooks/useAdminReports';
 import { useMessages } from '../hooks/useMessages';
+import PressScale from '../components/PressScale';
+import ModerationActionModal from '../components/ModerationActionModal';
 import { colors, fonts, radius, shadow, spacing } from '../theme';
 
 interface Props {
   reports: AdminReport[];
   loading: boolean;
+  error?: string | null;
+  onBan: (userId: string, reason: string) => void;
+  onWarn: (userId: string, message: string) => void;
 }
 
 function formatDateTime(iso: string): string {
@@ -34,7 +39,13 @@ function ConversationViewer({ matchRequestId }: { matchRequestId: string }) {
   );
 }
 
-function ReportCard({ report }: { report: AdminReport }) {
+function ReportCard({
+  report,
+  onOpenAction,
+}: {
+  report: AdminReport;
+  onOpenAction: (mode: 'ban' | 'warn', userId: string, userName: string) => void;
+}) {
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -57,23 +68,70 @@ function ReportCard({ report }: { report: AdminReport }) {
           {expanded && <ConversationViewer matchRequestId={report.matchRequestId} />}
         </View>
       )}
+
+      <View style={styles.actionRow}>
+        <PressScale
+          style={[styles.actionButton, styles.warnButton]}
+          onPress={() => onOpenAction('warn', report.reportedId, report.reportedName)}
+        >
+          <Ionicons name="alert-circle-outline" size={15} color={colors.text} />
+          <Text style={styles.warnText}>Warn</Text>
+        </PressScale>
+        <PressScale
+          style={[styles.actionButton, styles.banButton]}
+          onPress={() => onOpenAction('ban', report.reportedId, report.reportedName)}
+        >
+          <Ionicons name="ban-outline" size={15} color={colors.accentText} />
+          <Text style={styles.banText}>Ban</Text>
+        </PressScale>
+      </View>
     </View>
   );
 }
 
-export default function AdminReportsScreen({ reports, loading }: Props) {
+export default function AdminReportsScreen({ reports, loading, error, onBan, onWarn }: Props) {
+  const [action, setAction] = useState<{ mode: 'ban' | 'warn'; userId: string; userName: string } | null>(null);
+
+  const handleSubmit = (text: string) => {
+    if (!action) return;
+    if (action.mode === 'ban') onBan(action.userId, text);
+    else onWarn(action.userId, text);
+  };
+
   return (
-    <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
-      {reports.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Ionicons name="shield-checkmark-outline" size={26} color={colors.textFaint} />
-          <Text style={styles.emptyTitle}>{loading ? 'Loading…' : 'No reports'}</Text>
-          <Text style={styles.emptySubtitle}>Reports filed by players will show up here.</Text>
+    <View style={{ flex: 1 }}>
+      {!!error && (
+        <View style={styles.errorBox}>
+          <Ionicons name="warning-outline" size={15} color={colors.danger} />
+          <Text style={styles.errorText}>{error}</Text>
         </View>
-      ) : (
-        reports.map((r) => <ReportCard key={r.id} report={r} />)
       )}
-    </ScrollView>
+      <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
+        {reports.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="shield-checkmark-outline" size={26} color={colors.textFaint} />
+            <Text style={styles.emptyTitle}>{loading ? 'Loading…' : 'No reports'}</Text>
+            <Text style={styles.emptySubtitle}>Reports filed by players will show up here.</Text>
+          </View>
+        ) : (
+          reports.map((r) => (
+            <ReportCard
+              key={r.id}
+              report={r}
+              onOpenAction={(mode, userId, userName) => setAction({ mode, userId, userName })}
+            />
+          ))
+        )}
+      </ScrollView>
+
+      <ModerationActionModal
+        visible={!!action}
+        mode={action?.mode ?? 'warn'}
+        playerName={action?.userName ?? ''}
+        onClose={() => setAction(null)}
+        onSubmit={handleSubmit}
+      />
+    </View>
   );
 }
 
@@ -147,6 +205,55 @@ const styles = StyleSheet.create({
     fontFamily: fonts.medium,
     fontSize: 12,
     marginTop: spacing.sm,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: spacing.md,
+  },
+  actionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: radius.sm,
+  },
+  warnButton: {
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  warnText: {
+    color: colors.text,
+    fontFamily: fonts.bold,
+    fontSize: 13,
+  },
+  banButton: {
+    backgroundColor: colors.danger,
+  },
+  banText: {
+    color: colors.accentText,
+    fontFamily: fonts.bold,
+    fontSize: 13,
+  },
+  errorBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: colors.accentMuted,
+    borderWidth: 1,
+    borderColor: colors.danger,
+    borderRadius: radius.sm,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  errorText: {
+    color: colors.text,
+    fontFamily: fonts.medium,
+    fontSize: 12.5,
+    flex: 1,
   },
   emptyState: {
     alignItems: 'center',

@@ -37,6 +37,10 @@ create table if not exists profiles (
     check (verification_status in ('unverified', 'pending', 'verified', 'rejected')),
   verification_video_path text,
   is_admin boolean not null default false,
+  banned boolean not null default false,
+  ban_reason text,
+  warning_message text,
+  warned_at timestamptz,
   created_at timestamptz not null default now()
 );
 
@@ -114,6 +118,15 @@ $$;
 create policy "admins can update any profile" on profiles
   for update using (public.is_admin(auth.uid()));
 
+create or replace function public.is_banned(uid uuid)
+returns boolean
+language sql
+security definer
+stable
+as $$
+  select coalesce((select banned from profiles where id = uid), false);
+$$;
+
 -- Availability: readable by anyone signed in (needed for matching), writable only by the owner
 create policy "availability is viewable by authenticated users" on availability_slots
   for select using (auth.role() = 'authenticated');
@@ -132,7 +145,7 @@ create policy "users can leave communities" on community_members
 create policy "involved users can view a request" on match_requests
   for select using (auth.uid() = from_user_id or auth.uid() = to_user_id);
 create policy "senders can create a request" on match_requests
-  for insert with check (auth.uid() = from_user_id);
+  for insert with check (auth.uid() = from_user_id and not public.is_banned(auth.uid()));
 create policy "recipients can respond to a request" on match_requests
   for update using (auth.uid() = to_user_id);
 
@@ -192,6 +205,7 @@ create policy "involved users can view their conversation" on messages
 create policy "involved users can send messages on an accepted match" on messages
   for insert with check (
     auth.uid() = sender_id
+    and not public.is_banned(auth.uid())
     and exists (
       select 1 from match_requests mr
       where mr.id = messages.match_request_id
