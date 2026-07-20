@@ -55,3 +55,11 @@ export interface IncomingRequest {
   courtId: string;
   status: RequestStatus;
 }
+
+export interface ChatMessage {
+  id: string;
+  matchRequestId: string;
+  senderId: string;
+  body: string;
+  createdAt: string;
+}

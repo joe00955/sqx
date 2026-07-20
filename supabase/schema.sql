@@ -148,6 +148,7 @@ create table if not exists reports (
   id uuid primary key default gen_random_uuid(),
   reporter_id uuid not null references profiles(id) on delete cascade,
   reported_id uuid not null references profiles(id) on delete cascade,
+  match_request_id uuid references match_requests(id) on delete set null,
   reason text not null,
   details text not null default '',
   created_at timestamptz not null default now()
@@ -160,9 +161,63 @@ alter table reports enable row level security;
 create policy "users manage their own block list" on blocked_users
   for all using (auth.uid() = blocker_id) with check (auth.uid() = blocker_id);
 
--- Reports: write-only from the client; no one can read reports back via the API
+-- Reports: write-only for regular users; admins can read all of them to moderate
 create policy "users can file a report" on reports
   for insert with check (auth.uid() = reporter_id);
+create policy "admins can view all reports" on reports
+  for select using (public.is_admin(auth.uid()));
+
+-- ── In-app chat: one thread per accepted match request ────────────────
+-- Replaces revealing each other's email — messaging happens inside the
+-- app instead, where it can be moderated if reported.
+create table if not exists messages (
+  id uuid primary key default gen_random_uuid(),
+  match_request_id uuid not null references match_requests(id) on delete cascade,
+  sender_id uuid not null references profiles(id) on delete cascade,
+  body text not null,
+  created_at timestamptz not null default now()
+);
+
+alter table messages enable row level security;
+
+create policy "involved users can view their conversation" on messages
+  for select using (
+    exists (
+      select 1 from match_requests mr
+      where mr.id = messages.match_request_id
+        and (mr.from_user_id = auth.uid() or mr.to_user_id = auth.uid())
+    )
+  );
+
+create policy "involved users can send messages on an accepted match" on messages
+  for insert with check (
+    auth.uid() = sender_id
+    and exists (
+      select 1 from match_requests mr
+      where mr.id = messages.match_request_id
+        and mr.status = 'accepted'
+        and (mr.from_user_id = auth.uid() or mr.to_user_id = auth.uid())
+    )
+  );
+
+-- Admins can only read a conversation once it's actually been reported —
+-- not blanket access to every conversation.
+create policy "admins can view reported conversations" on messages
+  for select using (
+    public.is_admin(auth.uid())
+    and exists (select 1 from reports r where r.match_request_id = messages.match_request_id)
+  );
+
+-- Needed for live message delivery via Supabase Realtime.
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'messages'
+  ) then
+    alter publication supabase_realtime add table messages;
+  end if;
+end $$;
 
 -- ── Identity verification: photo + video review ──────────────────────
 -- 'avatars' is public-read (profile photos); 'verification-videos' is

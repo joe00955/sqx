@@ -12,6 +12,7 @@ interface Props {
   error?: string | null;
   onApprove: (userId: string, videoPath: string | null) => void;
   onReject: (userId: string, videoPath: string | null) => void;
+  embedded?: boolean;
 }
 
 function ReviewCard({
@@ -61,13 +62,15 @@ function ReviewCard({
   );
 }
 
-export default function AdminVerificationScreen({ pending, loading, error, onApprove, onReject }: Props) {
+export default function AdminVerificationScreen({ pending, loading, error, onApprove, onReject, embedded }: Props) {
   return (
-    <View style={styles.container}>
-      <View style={styles.sectionHeader}>
-        <Text style={styles.title}>ADMIN</Text>
-        <Text style={styles.subtitle}>Verification requests waiting for review</Text>
-      </View>
+    <View style={embedded ? styles.containerEmbedded : styles.container}>
+      {!embedded && (
+        <View style={styles.sectionHeader}>
+          <Text style={styles.title}>ADMIN</Text>
+          <Text style={styles.subtitle}>Verification requests waiting for review</Text>
+        </View>
+      )}
 
       {!!error && (
         <View style={styles.errorBox}>
@@ -98,6 +101,9 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
+  },
+  containerEmbedded: {
+    flex: 1,
   },
   sectionHeader: {
     marginBottom: spacing.md,

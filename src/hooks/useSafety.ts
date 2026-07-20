@@ -4,7 +4,7 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 interface Result {
   blockedIds: Set<string>;
   blockUser: (targetId: string) => void;
-  reportUser: (targetId: string, reason: string, details: string) => Promise<void>;
+  reportUser: (targetId: string, reason: string, details: string, matchRequestId?: string | null) => Promise<void>;
 }
 
 export function useSafety(currentUserId: string | null): Result {
@@ -33,9 +33,15 @@ export function useSafety(currentUserId: string | null): Result {
   );
 
   const reportUser = useCallback(
-    async (targetId: string, reason: string, details: string) => {
+    async (targetId: string, reason: string, details: string, matchRequestId?: string | null) => {
       if (!isSupabaseConfigured || !currentUserId) return;
-      await supabase.from('reports').insert({ reporter_id: currentUserId, reported_id: targetId, reason, details });
+      await supabase.from('reports').insert({
+        reporter_id: currentUserId,
+        reported_id: targetId,
+        reason,
+        details,
+        match_request_id: matchRequestId ?? null,
+      });
     },
     [currentUserId]
   );

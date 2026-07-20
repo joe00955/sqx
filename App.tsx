@@ -21,7 +21,8 @@ import OnboardingScreen from './src/screens/OnboardingScreen';
 import SquashXHomeScreen from './src/screens/SquashXHomeScreen';
 import LegalScreen from './src/screens/LegalScreen';
 import AuthScreen from './src/screens/AuthScreen';
-import AdminVerificationScreen from './src/screens/AdminVerificationScreen';
+import AdminScreen from './src/screens/AdminScreen';
+import ChatScreen from './src/screens/ChatScreen';
 import Logo from './src/components/Logo';
 import AccentMotif from './src/components/AccentMotif';
 import FadeIn from './src/components/FadeIn';
@@ -41,6 +42,8 @@ import { useLocation } from './src/hooks/useLocation';
 import { useSafety } from './src/hooks/useSafety';
 import { useVerification } from './src/hooks/useVerification';
 import { useAdminVerifications } from './src/hooks/useAdminVerifications';
+import { useMessages } from './src/hooks/useMessages';
+import { useAdminReports } from './src/hooks/useAdminReports';
 
 type Tab = 'browse' | 'requests' | 'communities' | 'ladders' | 'profile' | 'admin';
 
@@ -116,6 +119,7 @@ function AppShell() {
   const [onboarded, setOnboarded] = useState(false);
   const [tab, setTab] = useState<Tab>(initialRoute.tab);
   const [selectedCommunityId, setSelectedCommunityId] = useState<string | null>(null);
+  const [chatRequestId, setChatRequestId] = useState<string | null>(null);
   const [legalPage, setLegalPage] = useState<'privacy' | 'terms' | null>(null);
   const skipNextUrlSync = useRef(false);
 
@@ -176,7 +180,15 @@ function AppShell() {
   const verification = useVerification(userId);
   const isAdmin = isSupabaseConfigured && profile.isAdmin;
   const adminVerifications = useAdminVerifications(isAdmin);
+  const adminReports = useAdminReports(isAdmin);
   const visibleTabs = isAdmin ? [...baseTabs, adminTab] : baseTabs;
+
+  const myId = isSupabaseConfigured ? userId : 'me';
+  const chatRequest = chatRequestId
+    ? [...incomingRequests, ...outgoingRequests].find((r) => r.id === chatRequestId) ?? null
+    : null;
+  const chatPlayer = chatRequest ? livePlayers.find((p) => p.id === chatRequest.playerId) ?? null : null;
+  const chatMessages = useMessages(chatRequestId, myId);
 
   const handleUploadAvatar = async (file: File) => {
     const url = await verification.uploadAvatar(file);
@@ -208,6 +220,7 @@ function AppShell() {
   const handleTabPress = (key: Tab) => {
     setTab(key);
     setSelectedCommunityId(null);
+    setChatRequestId(null);
   };
 
   const handleOnboardingComplete = async (result: {
@@ -293,7 +306,7 @@ function AppShell() {
         {legalPage === 'privacy' ? (
           <LegalScreen
             title="Privacy Policy"
-            body="SquashX Rally is an early-access product. Creating an account stores your profile (name, skill level, availability, home court), and — if you allow it — your approximate location, used only to show distance and sort matches. Your email is only shared with another player after you both agree to a match, so you can arrange to play. If you choose to verify your account, your profile photo and a short verification video are used only to confirm it's really you — the video is reviewed once by our team and permanently deleted the moment a decision is made; we keep only the verified/not-verified result, never the footage itself. You can report or block another player at any time; reports are reviewed by the SquashX team and are not visible to other players. This is not yet a full legal privacy policy — one will be published before a commercial launch."
+            body="SquashX Rally is an early-access product. Creating an account stores your profile (name, skill level, availability, home court), and — if you allow it — your approximate location, used only to show distance and sort matches. Once you and another player agree to a match, you can message each other in-app instead of exchanging personal contact details; messages are stored so the conversation works, but are only readable by the two of you — no one else can read a conversation unless it's reported. If you choose to verify your account, your profile photo and a short verification video are used only to confirm it's really you — the video is reviewed once by our team and permanently deleted the moment a decision is made; we keep only the verified/not-verified result, never the footage itself. You can report or block another player at any time; a report lets our team review the reported conversation (if any) to moderate it, and is never visible to other players. This is not yet a full legal privacy policy — one will be published before a commercial launch."
             onBack={() => setLegalPage(null)}
           />
         ) : legalPage === 'terms' ? (
@@ -351,7 +364,21 @@ function AppShell() {
   const selectedCommunity = selectedCommunityId ? liveCommunities.find((c) => c.id === selectedCommunityId) : null;
 
   const activeScreen =
-    tab === 'browse' ? (
+    chatRequestId && chatPlayer ? (
+      <ChatScreen
+        player={chatPlayer}
+        messages={chatMessages.messages}
+        currentUserId={myId}
+        loading={chatMessages.loading}
+        onSend={chatMessages.sendMessage}
+        onBack={() => setChatRequestId(null)}
+        onBlock={() => {
+          blockUser(chatPlayer.id);
+          setChatRequestId(null);
+        }}
+        onReport={(reason, details) => reportUser(chatPlayer.id, reason, details, chatRequestId)}
+      />
+    ) : tab === 'browse' ? (
       <BrowseScreen
         me={me}
         players={livePlayers}
@@ -367,6 +394,7 @@ function AppShell() {
         players={livePlayers}
         courts={liveCourts}
         onRespond={respondToRequest}
+        onOpenChat={setChatRequestId}
       />
     ) : tab === 'communities' ? (
       selectedCommunity ? (
@@ -389,12 +417,14 @@ function AppShell() {
     ) : tab === 'ladders' ? (
       <LaddersScreen me={me} players={livePlayers} />
     ) : tab === 'admin' ? (
-      <AdminVerificationScreen
+      <AdminScreen
         pending={adminVerifications.pending}
-        loading={adminVerifications.loading}
-        error={adminVerifications.error}
+        verificationsLoading={adminVerifications.loading}
+        verificationError={adminVerifications.error}
         onApprove={adminVerifications.approve}
         onReject={adminVerifications.reject}
+        reports={adminReports.reports}
+        reportsLoading={adminReports.loading}
       />
     ) : (
       <ProfileScreen

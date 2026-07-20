@@ -13,17 +13,15 @@ interface Props {
   players: Player[];
   courts: Court[];
   onRespond: (id: string, status: RequestStatus) => void;
+  onOpenChat: (requestId: string) => void;
 }
 
-function ContactReveal({ player }: { player: Player }) {
-  if (!player.contactEmail) return null;
+function OpenChatButton({ player, onPress }: { player: Player; onPress: () => void }) {
   return (
-    <View style={styles.contactBox}>
-      <Ionicons name="mail-outline" size={14} color={colors.success} style={styles.bookingIcon} />
-      <Text style={styles.contactText}>
-        You're matched! Reach {player.name.split(' ')[0]} at {player.contactEmail}
-      </Text>
-    </View>
+    <PressScale style={styles.chatButton} onPress={onPress}>
+      <Ionicons name="chatbubble-ellipses-outline" size={15} color={colors.accentText} />
+      <Text style={styles.chatButtonText}>Message {player.name.split(' ')[0]}</Text>
+    </PressScale>
   );
 }
 
@@ -33,12 +31,14 @@ function RequestCard({
   courts,
   variant,
   onRespond,
+  onOpenChat,
 }: {
   request: IncomingRequest;
   players: Player[];
   courts: Court[];
   variant: 'incoming' | 'outgoing';
   onRespond: (id: string, status: RequestStatus) => void;
+  onOpenChat: (requestId: string) => void;
 }) {
   const player = players.find((p) => p.id === request.playerId);
   const court = courts.find((c) => c.id === request.courtId);
@@ -104,7 +104,9 @@ function RequestCard({
             />
             <Text style={styles.statusText}>{request.status === 'accepted' ? 'Accepted' : 'Declined'}</Text>
           </View>
-          {request.status === 'accepted' && <ContactReveal player={player} />}
+          {request.status === 'accepted' && (
+            <OpenChatButton player={player} onPress={() => onOpenChat(request.id)} />
+          )}
         </View>
       )}
     </View>
@@ -121,7 +123,7 @@ function EmptyState({ text }: { text: string }) {
   );
 }
 
-export default function RequestsScreen({ incoming, outgoing, players, courts, onRespond }: Props) {
+export default function RequestsScreen({ incoming, outgoing, players, courts, onRespond, onOpenChat }: Props) {
   const pending = useMemo(() => incoming.filter((r) => r.status === 'pending'), [incoming]);
   const resolved = useMemo(() => incoming.filter((r) => r.status !== 'pending'), [incoming]);
 
@@ -137,7 +139,7 @@ export default function RequestsScreen({ incoming, outgoing, players, courts, on
           <EmptyState text="No pending requests right now — new ones will show up here." />
         ) : (
           pending.map((r) => (
-            <RequestCard key={r.id} request={r} players={players} courts={courts} variant="incoming" onRespond={onRespond} />
+            <RequestCard key={r.id} request={r} players={players} courts={courts} variant="incoming" onRespond={onRespond} onOpenChat={onOpenChat} />
           ))
         )}
 
@@ -145,7 +147,7 @@ export default function RequestsScreen({ incoming, outgoing, players, courts, on
           <>
             <Text style={styles.resolvedHeading}>RESOLVED</Text>
             {resolved.map((r) => (
-              <RequestCard key={r.id} request={r} players={players} courts={courts} variant="incoming" onRespond={onRespond} />
+              <RequestCard key={r.id} request={r} players={players} courts={courts} variant="incoming" onRespond={onRespond} onOpenChat={onOpenChat} />
             ))}
           </>
         )}
@@ -154,7 +156,7 @@ export default function RequestsScreen({ incoming, outgoing, players, courts, on
           <>
             <Text style={styles.resolvedHeading}>SENT BY YOU</Text>
             {outgoing.map((r) => (
-              <RequestCard key={r.id} request={r} players={players} courts={courts} variant="outgoing" onRespond={onRespond} />
+              <RequestCard key={r.id} request={r} players={players} courts={courts} variant="outgoing" onRespond={onRespond} onOpenChat={onOpenChat} />
             ))}
           </>
         )}
@@ -275,19 +277,20 @@ const styles = StyleSheet.create({
     fontSize: 13,
     flex: 1,
   },
-  contactBox: {
+  chatButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.accentMuted,
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: colors.accent,
     borderRadius: radius.sm,
-    padding: spacing.md,
+    paddingVertical: 10,
     marginTop: spacing.sm,
   },
-  contactText: {
-    color: colors.text,
-    fontFamily: fonts.semibold,
-    fontSize: 12.5,
-    flex: 1,
+  chatButtonText: {
+    color: colors.accentText,
+    fontFamily: fonts.bold,
+    fontSize: 13,
   },
   actionRow: {
     flexDirection: 'row',
