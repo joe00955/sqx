@@ -21,9 +21,10 @@ const toHm = (time: string) => time.slice(0, 5);
 interface Result {
   incoming: IncomingRequest[];
   outgoing: IncomingRequest[];
-  respond: (id: string, status: RequestStatus) => void;
+  respond: (id: string, status: RequestStatus) => Promise<void>;
   sendRequest: (input: { toUserId: string; mode: MatchMode; booking: SuggestedBooking }) => Promise<void>;
   loading: boolean;
+  error: string | null;
 }
 
 export function useMatchRequests(currentUserId: string | null): Result {
@@ -31,6 +32,7 @@ export function useMatchRequests(currentUserId: string | null): Result {
   const [incomingRows, setIncomingRows] = useState<RequestRow[]>([]);
   const [outgoingRows, setOutgoingRows] = useState<RequestRow[]>([]);
   const [loading, setLoading] = useState(isSupabaseConfigured);
+  const [error, setError] = useState<string | null>(null);
 
   const refetch = useCallback(async () => {
     if (!isSupabaseConfigured || !currentUserId) return;
@@ -74,31 +76,69 @@ export function useMatchRequests(currentUserId: string | null): Result {
   const incoming: IncomingRequest[] = isSupabaseConfigured ? incomingRows.map(toIncomingRequest) : mockState;
   const outgoing: IncomingRequest[] = isSupabaseConfigured ? outgoingRows.map(toOutgoingRequest) : [];
 
-  const respond = useCallback((id: string, status: RequestStatus) => {
+  const respond = useCallback(async (id: string, status: RequestStatus) => {
+    setError(null);
     if (!isSupabaseConfigured) {
       setMockState((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
       return;
     }
+
+    const { data, error: updateError } = await supabase
+      .from('match_requests')
+      .update({ status })
+      .eq('id', id)
+      .select('id');
+
+    if (updateError) {
+      setError(updateError.message);
+      return;
+    }
+    if (!data || data.length === 0) {
+      setError("That didn't save — the request may no longer be pending. Try reloading.");
+      return;
+    }
+
     setIncomingRows((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
-    supabase.from('match_requests').update({ status }).eq('id', id);
   }, []);
 
   const sendRequest = useCallback(
     async (input: { toUserId: string; mode: MatchMode; booking: SuggestedBooking }) => {
       if (!isSupabaseConfigured || !currentUserId) return;
-      await supabase.from('match_requests').insert({
-        from_user_id: currentUserId,
-        to_user_id: input.toUserId,
-        mode: input.mode,
-        day: input.booking.day,
-        start_time: input.booking.start,
-        end_time: input.booking.end,
-        court_id: input.booking.court.id,
-      });
+      setError(null);
+
+      // If they've already sent us a pending request, that's a mutual match —
+      // accept theirs instead of creating a second, opposite-direction request.
+      const { data: reverse } = await supabase
+        .from('match_requests')
+        .select('id')
+        .eq('from_user_id', input.toUserId)
+        .eq('to_user_id', currentUserId)
+        .eq('status', 'pending')
+        .maybeSingle();
+
+      if (reverse) {
+        const { error: updateError } = await supabase
+          .from('match_requests')
+          .update({ status: 'accepted' })
+          .eq('id', reverse.id);
+        if (updateError) setError(updateError.message);
+      } else {
+        const { error: insertError } = await supabase.from('match_requests').insert({
+          from_user_id: currentUserId,
+          to_user_id: input.toUserId,
+          mode: input.mode,
+          day: input.booking.day,
+          start_time: input.booking.start,
+          end_time: input.booking.end,
+          court_id: input.booking.court.id,
+        });
+        if (insertError) setError(insertError.message);
+      }
+
       await refetch();
     },
     [currentUserId, refetch]
   );
 
-  return { incoming, outgoing, respond, sendRequest, loading };
+  return { incoming, outgoing, respond, sendRequest, loading, error };
 }

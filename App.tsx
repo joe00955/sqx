@@ -176,7 +176,13 @@ function AppShell() {
     userId,
     livePlayers
   );
-  const { incoming: incomingRequests, outgoing: outgoingRequests, respond: respondToRequest, sendRequest } = useMatchRequests(userId);
+  const {
+    incoming: incomingRequests,
+    outgoing: outgoingRequests,
+    respond: respondToRequest,
+    sendRequest,
+    error: requestsError,
+  } = useMatchRequests(userId);
   const verification = useVerification(userId);
   const isAdmin = isSupabaseConfigured && profile.isAdmin;
   const adminVerifications = useAdminVerifications(isAdmin);
@@ -393,6 +399,7 @@ function AppShell() {
         outgoing={outgoingRequests}
         players={livePlayers}
         courts={liveCourts}
+        error={requestsError}
         onRespond={respondToRequest}
         onOpenChat={setChatRequestId}
       />

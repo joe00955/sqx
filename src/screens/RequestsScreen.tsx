@@ -12,6 +12,7 @@ interface Props {
   outgoing: IncomingRequest[];
   players: Player[];
   courts: Court[];
+  error?: string | null;
   onRespond: (id: string, status: RequestStatus) => void;
   onOpenChat: (requestId: string) => void;
 }
@@ -123,7 +124,7 @@ function EmptyState({ text }: { text: string }) {
   );
 }
 
-export default function RequestsScreen({ incoming, outgoing, players, courts, onRespond, onOpenChat }: Props) {
+export default function RequestsScreen({ incoming, outgoing, players, courts, error, onRespond, onOpenChat }: Props) {
   const pending = useMemo(() => incoming.filter((r) => r.status === 'pending'), [incoming]);
   const resolved = useMemo(() => incoming.filter((r) => r.status !== 'pending'), [incoming]);
 
@@ -133,6 +134,13 @@ export default function RequestsScreen({ incoming, outgoing, players, courts, on
         <Text style={styles.title}>REQUESTS</Text>
         <Text style={styles.subtitle}>People who want to play you</Text>
       </View>
+
+      {!!error && (
+        <View style={styles.errorBox}>
+          <Ionicons name="warning-outline" size={15} color={colors.danger} />
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      )}
 
       <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
         {pending.length === 0 ? (
@@ -173,6 +181,23 @@ const styles = StyleSheet.create({
   },
   sectionHeader: {
     marginBottom: spacing.md,
+  },
+  errorBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: colors.accentMuted,
+    borderWidth: 1,
+    borderColor: colors.danger,
+    borderRadius: radius.sm,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  errorText: {
+    color: colors.text,
+    fontFamily: fonts.medium,
+    fontSize: 12.5,
+    flex: 1,
   },
   title: {
     color: colors.text,
