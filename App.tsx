@@ -19,6 +19,7 @@ import LaddersScreen from './src/screens/LaddersScreen';
 import RequestsScreen from './src/screens/RequestsScreen';
 import OnboardingScreen from './src/screens/OnboardingScreen';
 import SquashXHomeScreen from './src/screens/SquashXHomeScreen';
+import CoachScreen from './src/screens/CoachScreen';
 import LegalScreen from './src/screens/LegalScreen';
 import AuthScreen from './src/screens/AuthScreen';
 import AdminScreen from './src/screens/AdminScreen';
@@ -79,12 +80,14 @@ function initialsFor(name: string): string {
 const isWeb = Platform.OS === 'web';
 
 interface Route {
-  view: 'hub' | 'rally';
+  view: 'hub' | 'rally' | 'coach';
   tab: Tab;
 }
 
 function pathForRoute(route: Route): string {
-  return route.view === 'hub' ? '/' : `/${route.tab}`;
+  if (route.view === 'hub') return '/';
+  if (route.view === 'coach') return '/coach';
+  return `/${route.tab}`;
 }
 
 function routeForPath(pathname: string): Route {
@@ -103,6 +106,8 @@ function routeForPath(pathname: string): Route {
       return { view: 'rally', tab: 'browse' };
     case '/admin':
       return { view: 'rally', tab: 'admin' };
+    case '/coach':
+      return { view: 'coach', tab: 'browse' };
     default:
       return { view: 'hub', tab: 'browse' };
   }
@@ -124,7 +129,7 @@ function AppShell() {
   const { width } = useWindowDimensions();
   const isWide = width >= WIDE_BREAKPOINT;
 
-  const [view, setView] = useState<'hub' | 'rally'>(initialRoute.view);
+  const [view, setView] = useState<'hub' | 'rally' | 'coach'>(initialRoute.view);
   const [onboarded, setOnboarded] = useState(false);
   const [tab, setTab] = useState<Tab>(initialRoute.tab);
   const [selectedCommunityId, setSelectedCommunityId] = useState<string | null>(null);
@@ -356,10 +361,20 @@ function AppShell() {
         ) : (
           <SquashXHomeScreen
             onEnterRally={() => setView('rally')}
+            onOpenCoach={() => setView('coach')}
             onOpenPrivacy={() => setLegalPage('privacy')}
             onOpenTerms={() => setLegalPage('terms')}
           />
         )}
+      </SafeAreaView>
+    );
+  }
+
+  if (view === 'coach') {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <StatusBar barStyle="light-content" backgroundColor={colors.background} />
+        <CoachScreen onBack={() => setView('hub')} />
       </SafeAreaView>
     );
   }

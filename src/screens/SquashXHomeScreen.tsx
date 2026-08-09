@@ -9,16 +9,12 @@ import { colors, fonts, gradients, radius, shadow, spacing } from '../theme';
 
 interface Props {
   onEnterRally: () => void;
+  onOpenCoach: () => void;
   onOpenPrivacy: () => void;
   onOpenTerms: () => void;
 }
 
 const comingSoon: { icon: keyof typeof Ionicons.glyphMap; name: string; description: string }[] = [
-  {
-    icon: 'analytics-outline',
-    name: 'SquashX Coach',
-    description: 'AI-assisted technique feedback and personalized training plans.',
-  },
   {
     icon: 'stopwatch-outline',
     name: 'SquashX Score',
@@ -46,7 +42,7 @@ const steps: { title: string; description: string }[] = [
   },
 ];
 
-export default function SquashXHomeScreen({ onEnterRally, onOpenPrivacy, onOpenTerms }: Props) {
+export default function SquashXHomeScreen({ onEnterRally, onOpenCoach, onOpenPrivacy, onOpenTerms }: Props) {
   return (
     <LinearGradient colors={gradients.glow} style={styles.root}>
       <AccentMotif style={styles.motif} />
@@ -92,6 +88,20 @@ export default function SquashXHomeScreen({ onEnterRally, onOpenPrivacy, onOpenT
         </View>
 
         <Text style={styles.sectionTitle}>MORE FROM SQUASHX</Text>
+        <PressScale style={styles.liveProductCard} onPress={onOpenCoach}>
+          <View style={styles.productIconWrap}>
+            <Ionicons name="footsteps-outline" size={18} color={colors.accent} />
+          </View>
+          <View style={styles.productTextWrap}>
+            <Text style={styles.productName}>SquashX Coach</Text>
+            <Text style={styles.productDescription}>
+              A footwork ghosting timer to sharpen your court reflexes — free to play.
+            </Text>
+          </View>
+          <View style={styles.playPill}>
+            <Text style={styles.playPillText}>Play now</Text>
+          </View>
+        </PressScale>
         {comingSoon.map((product) => (
           <View key={product.name} style={styles.productCard}>
             <View style={styles.productIconWrap}>
@@ -287,6 +297,28 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     marginBottom: spacing.sm,
     opacity: 0.75,
+  },
+  liveProductCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.accent,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  playPill: {
+    backgroundColor: colors.accent,
+    borderRadius: radius.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  playPillText: {
+    color: colors.accentText,
+    fontFamily: fonts.bold,
+    fontSize: 10.5,
+    textTransform: 'uppercase',
   },
   productIconWrap: {
     width: 36,

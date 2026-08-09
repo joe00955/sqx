@@ -47,3 +47,19 @@ export function playSentSound() {
 export function playReceivedSound() {
   playTone([880, 660], 0.11, 0.06);
 }
+
+export function playCueSound() {
+  playTone([520], 0.07, 0.045);
+}
+
+export function playHitSound() {
+  playTone([780, 1040], 0.08, 0.055);
+}
+
+export function playMissSound() {
+  playTone([300, 210], 0.16, 0.06);
+}
+
+export function playGameOverSound() {
+  playTone([420, 340, 260], 0.14, 0.06);
+}
