@@ -1,4 +1,11 @@
-import { MAX_LIVES, MIN_MS, START_MS, STEP_MS, ZONES, pickNextZone, timeForRep } from '../ghostingGame';
+import {
+  ON_COURT_PACING,
+  REACTION_MAX_LIVES,
+  REACTION_PACING,
+  ZONES,
+  intervalForRep,
+  pickNextZone,
+} from '../ghostingGame';
 
 describe('pickNextZone', () => {
   it('never repeats the immediately previous zone', () => {
@@ -21,24 +28,32 @@ describe('pickNextZone', () => {
   });
 });
 
-describe('timeForRep', () => {
-  it('starts at START_MS with no streak', () => {
-    expect(timeForRep(0)).toBe(START_MS);
+describe('intervalForRep', () => {
+  const pacing = { startMs: 1000, minMs: 400, stepMs: 50 };
+
+  it('starts at pacing.startMs with no reps completed', () => {
+    expect(intervalForRep(0, pacing)).toBe(1000);
   });
 
-  it('shrinks by STEP_MS per streak point', () => {
-    expect(timeForRep(1)).toBe(START_MS - STEP_MS);
-    expect(timeForRep(5)).toBe(START_MS - 5 * STEP_MS);
+  it('shrinks by pacing.stepMs per rep', () => {
+    expect(intervalForRep(1, pacing)).toBe(950);
+    expect(intervalForRep(5, pacing)).toBe(750);
   });
 
-  it('never drops below MIN_MS', () => {
-    expect(timeForRep(1000)).toBe(MIN_MS);
+  it('never drops below pacing.minMs', () => {
+    expect(intervalForRep(1000, pacing)).toBe(400);
+  });
+
+  it('paces the on-court drill slower than the reaction trainer throughout', () => {
+    for (const rep of [0, 5, 20, 100]) {
+      expect(intervalForRep(rep, ON_COURT_PACING)).toBeGreaterThan(intervalForRep(rep, REACTION_PACING));
+    }
   });
 });
 
-describe('MAX_LIVES', () => {
+describe('REACTION_MAX_LIVES', () => {
   it('is a small positive number of misses allowed', () => {
-    expect(MAX_LIVES).toBeGreaterThan(0);
-    expect(MAX_LIVES).toBeLessThanOrEqual(5);
+    expect(REACTION_MAX_LIVES).toBeGreaterThan(0);
+    expect(REACTION_MAX_LIVES).toBeLessThanOrEqual(5);
   });
 });

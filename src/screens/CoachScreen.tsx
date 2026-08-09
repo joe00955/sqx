@@ -2,11 +2,21 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import PressScale from '../components/PressScale';
-import { MAX_LIVES, Zone, ZONES, pickNextZone, timeForRep } from '../logic/ghostingGame';
+import {
+  ON_COURT_PACING,
+  REACTION_MAX_LIVES,
+  REACTION_PACING,
+  Zone,
+  ZONES,
+  ZONE_LABELS,
+  intervalForRep,
+  pickNextZone,
+} from '../logic/ghostingGame';
 import { playCueSound, playGameOverSound, playHitSound, playMissSound } from '../lib/sound';
+import { isSpeechSupported, speakZone, stopSpeaking } from '../lib/speech';
 import { colors, fonts, radius, shadow, spacing } from '../theme';
 
-type Phase = 'idle' | 'playing' | 'gameover';
+type Mode = 'menu' | 'onCourt' | 'reaction';
 
 const ZONE_POSITIONS: Record<Zone, { top: string; left: string }> = {
   FL: { top: '14%', left: '22%' },
@@ -17,16 +27,272 @@ const ZONE_POSITIONS: Record<Zone, { top: string; left: string }> = {
 };
 
 const NEXT_REP_PAUSE_MS = 220;
+const DURATIONS_MIN = [1, 2, 5];
 
 interface Props {
   onBack: () => void;
 }
 
 export default function CoachScreen({ onBack }: Props) {
-  const [phase, setPhase] = useState<Phase>('idle');
+  const [mode, setMode] = useState<Mode>('menu');
+
+  const subtitle =
+    mode === 'onCourt' ? 'On-court ghosting drill' : mode === 'reaction' ? 'Reaction trainer' : 'Footwork training';
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <Pressable onPress={onBack} hitSlop={8} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={20} color={colors.text} />
+        </Pressable>
+        <View>
+          <Text style={styles.title}>SQUASHX COACH</Text>
+          <Text style={styles.subtitle}>{subtitle}</Text>
+        </View>
+      </View>
+
+      {mode === 'menu' && <ModeMenu onPick={setMode} />}
+      {mode === 'onCourt' && <OnCourtDrill onExit={() => setMode('menu')} />}
+      {mode === 'reaction' && <ReactionTrainer onExit={() => setMode('menu')} />}
+    </View>
+  );
+}
+
+function ModeMenu({ onPick }: { onPick: (mode: Mode) => void }) {
+  return (
+    <View>
+      <Pressable style={styles.modeCard} onPress={() => onPick('onCourt')}>
+        <View style={styles.modeIconWrap}>
+          <Ionicons name="walk-outline" size={22} color={colors.accent} />
+        </View>
+        <View style={styles.modeTextWrap}>
+          <Text style={styles.modeCardTitle}>On-Court Drill</Text>
+          <Text style={styles.modeCardBody}>
+            Real ghosting practice. We call out corners by voice — sprint there and recover on an actual
+            court. Bring your racket, not your eyes.
+          </Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
+      </Pressable>
+      <Pressable style={styles.modeCard} onPress={() => onPick('reaction')}>
+        <View style={styles.modeIconWrap}>
+          <Ionicons name="flash-outline" size={22} color={colors.accent} />
+        </View>
+        <View style={styles.modeTextWrap}>
+          <Text style={styles.modeCardTitle}>Reaction Trainer</Text>
+          <Text style={styles.modeCardBody}>No court handy? A fast screen-tap drill for reflexes instead.</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
+      </Pressable>
+    </View>
+  );
+}
+
+type OnCourtPhase = 'idle' | 'playing' | 'summary';
+
+function OnCourtDrill({ onExit }: { onExit: () => void }) {
+  const [phase, setPhase] = useState<OnCourtPhase>('idle');
+  const [durationMin, setDurationMin] = useState(2);
+  const [activeZone, setActiveZone] = useState<Zone | null>(null);
+  const [callCount, setCallCount] = useState(0);
+  const [remainingSec, setRemainingSec] = useState(0);
+
+  const tokenRef = useRef(0);
+  const callTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const speakTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const tickIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const sessionEndAtRef = useRef(0);
+
+  const clearTimers = useCallback(() => {
+    if (callTimeoutRef.current) {
+      clearTimeout(callTimeoutRef.current);
+      callTimeoutRef.current = null;
+    }
+    if (speakTimeoutRef.current) {
+      clearTimeout(speakTimeoutRef.current);
+      speakTimeoutRef.current = null;
+    }
+    if (tickIntervalRef.current) {
+      clearInterval(tickIntervalRef.current);
+      tickIntervalRef.current = null;
+    }
+  }, []);
+
+  useEffect(
+    () => () => {
+      clearTimers();
+      stopSpeaking();
+    },
+    [clearTimers]
+  );
+
+  const finishSession = useCallback(() => {
+    clearTimers();
+    stopSpeaking();
+    setActiveZone(null);
+    setPhase('summary');
+  }, [clearTimers]);
+
+  const scheduleCall = useCallback(
+    (rep: number, previousZone: Zone | null, token: number) => {
+      const timeLeft = sessionEndAtRef.current - Date.now();
+      if (timeLeft <= 0) {
+        finishSession();
+        return;
+      }
+
+      const zone = pickNextZone(previousZone);
+      setActiveZone(zone);
+      setCallCount(rep + 1);
+      playCueSound();
+      speakTimeoutRef.current = setTimeout(() => {
+        if (tokenRef.current === token) speakZone(zone);
+      }, 150);
+
+      const interval = intervalForRep(rep, ON_COURT_PACING);
+      const nextDelay = Math.min(interval, timeLeft);
+      callTimeoutRef.current = setTimeout(() => {
+        if (tokenRef.current !== token) return;
+        if (Date.now() >= sessionEndAtRef.current) {
+          finishSession();
+        } else {
+          scheduleCall(rep + 1, zone, token);
+        }
+      }, nextDelay);
+    },
+    [finishSession]
+  );
+
+  const start = () => {
+    clearTimers();
+    const token = ++tokenRef.current;
+    sessionEndAtRef.current = Date.now() + durationMin * 60000;
+    setCallCount(0);
+    setRemainingSec(durationMin * 60);
+    setPhase('playing');
+    scheduleCall(0, null, token);
+
+    tickIntervalRef.current = setInterval(() => {
+      setRemainingSec(Math.max(0, Math.round((sessionEndAtRef.current - Date.now()) / 1000)));
+    }, 500);
+  };
+
+  const stop = () => {
+    tokenRef.current += 1; // invalidate any pending call so it can't fire after we've stopped
+    finishSession();
+  };
+
+  const mm = Math.floor(remainingSec / 60);
+  const ss = String(remainingSec % 60).padStart(2, '0');
+
+  return (
+    <View style={styles.playArea}>
+      {phase === 'idle' && (
+        <View style={styles.card}>
+          <Ionicons name="walk-outline" size={26} color={colors.accent} />
+          <Text style={styles.cardTitle}>On-Court Drill</Text>
+          <Text style={styles.cardBody}>
+            Prop your phone somewhere you can hear it — courtside is fine. Hit start, then sprint to each
+            corner as it's called and recover to the T. No screen taps needed once you're moving.
+          </Text>
+          {!isSpeechSupported && (
+            <View style={styles.warnRow}>
+              <Ionicons name="alert-circle-outline" size={14} color={colors.danger} />
+              <Text style={styles.warnText}>
+                Voice isn't supported in this browser — prop your phone somewhere visible instead, the call
+                still shows on screen.
+              </Text>
+            </View>
+          )}
+          <Text style={styles.durationLabel}>SESSION LENGTH</Text>
+          <View style={styles.durationRow}>
+            {DURATIONS_MIN.map((d) => (
+              <Pressable
+                key={d}
+                style={[styles.durationChip, d === durationMin && styles.durationChipActive]}
+                onPress={() => setDurationMin(d)}
+              >
+                <Text style={[styles.durationChipText, d === durationMin && styles.durationChipTextActive]}>
+                  {d} min
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+          <PressScale style={styles.startButton} onPress={start}>
+            <Ionicons name="play" size={16} color={colors.accentText} />
+            <Text style={styles.startButtonText}>Start drill</Text>
+          </PressScale>
+          <Pressable onPress={onExit} hitSlop={8} style={styles.laterButton}>
+            <Text style={styles.laterText}>Choose a different mode</Text>
+          </Pressable>
+        </View>
+      )}
+
+      {phase === 'playing' && (
+        <View style={styles.playArea}>
+          <View style={styles.statRow}>
+            <View style={styles.statCell}>
+              <Text style={styles.statValue}>{callCount}</Text>
+              <Text style={styles.statLabel}>CALLS</Text>
+            </View>
+            <View style={styles.statCell}>
+              <Text style={styles.statValue}>
+                {mm}:{ss}
+              </Text>
+              <Text style={styles.statLabel}>LEFT</Text>
+            </View>
+          </View>
+
+          <View style={styles.callBanner}>
+            <Text style={styles.callText}>{activeZone ? ZONE_LABELS[activeZone] : '—'}</Text>
+          </View>
+
+          <View style={styles.court}>
+            {ZONES.map((zone) => {
+              const active = zone === activeZone;
+              return (
+                <View key={zone} style={[styles.zone, ZONE_POSITIONS[zone] as any, active && styles.zoneActive]}>
+                  <Text style={[styles.zoneText, active && styles.zoneTextActive]}>{zone}</Text>
+                </View>
+              );
+            })}
+          </View>
+
+          <PressScale style={styles.endButton} onPress={stop}>
+            <Ionicons name="stop-circle-outline" size={17} color={colors.text} />
+            <Text style={styles.endButtonText}>End session</Text>
+          </PressScale>
+        </View>
+      )}
+
+      {phase === 'summary' && (
+        <View style={styles.card}>
+          <Ionicons name="checkmark-done-circle-outline" size={26} color={colors.success} />
+          <Text style={styles.cardTitle}>Session complete</Text>
+          <Text style={styles.finalScore}>{callCount}</Text>
+          <Text style={styles.cardBody}>
+            corners called in {durationMin} minute{durationMin > 1 ? 's' : ''}. Nice work.
+          </Text>
+          <PressScale style={styles.startButton} onPress={() => setPhase('idle')}>
+            <Ionicons name="refresh" size={16} color={colors.accentText} />
+            <Text style={styles.startButtonText}>Set up another</Text>
+          </PressScale>
+          <Pressable onPress={onExit} hitSlop={8} style={styles.laterButton}>
+            <Text style={styles.laterText}>Back to menu</Text>
+          </Pressable>
+        </View>
+      )}
+    </View>
+  );
+}
+
+type ReactionPhase = 'idle' | 'playing' | 'gameover';
+
+function ReactionTrainer({ onExit }: { onExit: () => void }) {
+  const [phase, setPhase] = useState<ReactionPhase>('idle');
   const [score, setScore] = useState(0);
   const [best, setBest] = useState(0);
-  const [lives, setLives] = useState(MAX_LIVES);
+  const [lives, setLives] = useState(REACTION_MAX_LIVES);
   const [activeZone, setActiveZone] = useState<Zone | null>(null);
   const [flash, setFlash] = useState<'hit' | 'miss' | null>(null);
 
@@ -48,7 +314,7 @@ export default function CoachScreen({ onBack }: Props) {
     (nextScore: number, previousZone: Zone | null) => {
       const token = ++repTokenRef.current;
       const zone = pickNextZone(previousZone);
-      const durationMs = timeForRep(nextScore);
+      const durationMs = intervalForRep(nextScore, REACTION_PACING);
 
       setActiveZone(zone);
       progress.setValue(1);
@@ -119,7 +385,7 @@ export default function CoachScreen({ onBack }: Props) {
   const startGame = () => {
     clearTimers();
     setScore(0);
-    setLives(MAX_LIVES);
+    setLives(REACTION_MAX_LIVES);
     setFlash(null);
     setPhase('playing');
     startRep(0, null);
@@ -128,23 +394,13 @@ export default function CoachScreen({ onBack }: Props) {
   const barWidth = progress.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] });
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Pressable onPress={onBack} hitSlop={8} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={20} color={colors.text} />
-        </Pressable>
-        <View>
-          <Text style={styles.title}>SQUASHX COACH</Text>
-          <Text style={styles.subtitle}>Footwork ghosting timer</Text>
-        </View>
-      </View>
-
+    <View style={styles.playArea}>
       {phase === 'idle' && (
         <View style={styles.card}>
-          <Ionicons name="footsteps-outline" size={26} color={colors.accent} />
+          <Ionicons name="flash-outline" size={26} color={colors.accent} />
           <Text style={styles.cardTitle}>Beat the call</Text>
           <Text style={styles.cardBody}>
-            A court zone lights up — sprint to it before the bar runs out. Miss three and it's game over. The
+            A court zone lights up — tap it before the bar runs out. Miss three and it's game over. The
             calls come faster the longer you last.
           </Text>
           {best > 0 && (
@@ -157,6 +413,9 @@ export default function CoachScreen({ onBack }: Props) {
             <Ionicons name="play" size={16} color={colors.accentText} />
             <Text style={styles.startButtonText}>Start drill</Text>
           </PressScale>
+          <Pressable onPress={onExit} hitSlop={8} style={styles.laterButton}>
+            <Text style={styles.laterText}>Choose a different mode</Text>
+          </Pressable>
         </View>
       )}
 
@@ -168,7 +427,7 @@ export default function CoachScreen({ onBack }: Props) {
               <Text style={styles.statLabel}>SCORE</Text>
             </View>
             <View style={styles.livesRow}>
-              {Array.from({ length: MAX_LIVES }).map((_, i) => (
+              {Array.from({ length: REACTION_MAX_LIVES }).map((_, i) => (
                 <Ionicons
                   key={i}
                   name={i < lives ? 'heart' : 'heart-outline'}
@@ -211,15 +470,13 @@ export default function CoachScreen({ onBack }: Props) {
           <Ionicons name="flag-outline" size={26} color={colors.accent} />
           <Text style={styles.cardTitle}>Drill over</Text>
           <Text style={styles.finalScore}>{score}</Text>
-          <Text style={styles.cardBody}>
-            {score >= best && score > 0 ? "New session best!" : `Session best: ${best}`}
-          </Text>
+          <Text style={styles.cardBody}>{score >= best && score > 0 ? 'New session best!' : `Session best: ${best}`}</Text>
           <PressScale style={styles.startButton} onPress={startGame}>
             <Ionicons name="refresh" size={16} color={colors.accentText} />
             <Text style={styles.startButtonText}>Play again</Text>
           </PressScale>
-          <Pressable onPress={onBack} hitSlop={8} style={styles.laterButton}>
-            <Text style={styles.laterText}>Back to home</Text>
+          <Pressable onPress={onExit} hitSlop={8} style={styles.laterButton}>
+            <Text style={styles.laterText}>Back to menu</Text>
           </Pressable>
         </View>
       )}
@@ -264,6 +521,40 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     marginTop: 1,
   },
+  modeCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
+  },
+  modeIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: colors.accentMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modeTextWrap: {
+    flex: 1,
+  },
+  modeCardTitle: {
+    color: colors.text,
+    fontFamily: fonts.bold,
+    fontSize: 15,
+    marginBottom: 3,
+  },
+  modeCardBody: {
+    color: colors.textMuted,
+    fontFamily: fonts.medium,
+    fontSize: 12,
+    lineHeight: 17,
+  },
   card: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
@@ -304,6 +595,57 @@ const styles = StyleSheet.create({
     color: colors.accent,
     fontFamily: fonts.bold,
     fontSize: 12.5,
+  },
+  warnRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    backgroundColor: colors.accentMuted,
+    borderRadius: radius.sm,
+    padding: spacing.sm,
+    marginBottom: spacing.sm,
+    width: '100%',
+  },
+  warnText: {
+    flex: 1,
+    color: colors.textMuted,
+    fontFamily: fonts.medium,
+    fontSize: 11.5,
+    lineHeight: 16,
+  },
+  durationLabel: {
+    color: colors.textFaint,
+    fontFamily: fonts.bold,
+    fontSize: 10.5,
+    letterSpacing: 0.5,
+    marginTop: spacing.sm,
+    marginBottom: spacing.sm,
+    alignSelf: 'flex-start',
+  },
+  durationRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: spacing.md,
+  },
+  durationChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  durationChipActive: {
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
+  },
+  durationChipText: {
+    color: colors.textMuted,
+    fontFamily: fonts.bold,
+    fontSize: 12.5,
+  },
+  durationChipTextActive: {
+    color: colors.accentText,
   },
   startButton: {
     flexDirection: 'row',
@@ -369,9 +711,38 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: colors.accent,
   },
+  callBanner: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.lg,
+  },
+  callText: {
+    color: colors.accent,
+    fontFamily: fonts.display,
+    fontSize: 34,
+    letterSpacing: 0.4,
+    textAlign: 'center',
+  },
+  endButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    paddingVertical: 12,
+    marginTop: spacing.md,
+  },
+  endButtonText: {
+    color: colors.text,
+    fontFamily: fonts.bold,
+    fontSize: 13.5,
+  },
   court: {
     flex: 1,
-    minHeight: 340,
+    minHeight: 300,
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
